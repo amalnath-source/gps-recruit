@@ -5,8 +5,48 @@
   var RS = window.RS = { s: '', me: null, clientId: '', waiting: [] };
   try { RS.s = localStorage.getItem(KEY) || ''; } catch (e) { RS.s = ''; }
 
+  /* Working indicator: every call to the server shows a slim bar at the top, a "Working…" pill with the seconds
+     (after a moment) and a spinner on the button that was clicked, so the page never looks dead while it waits. */
+  var BUSY = { n: 0, t0: 0, tick: null, btn: null, at: 0 };
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button, .btn, a.card') : null;
+    if (b) { BUSY.btn = b; BUSY.at = Date.now(); }
+  }, true);
+  function busyEl() {
+    var w = document.getElementById('rsBusy');
+    if (!w) {
+      w = document.createElement('div'); w.id = 'rsBusy';
+      w.innerHTML = '<div class="rs-bar"></div><div class="rs-pill" role="status" aria-live="polite"><span class="rs-spin"></span><span id="rsBusyT">Working…</span></div>';
+      document.body.appendChild(w);
+    }
+    return w;
+  }
+  RS.busy = function (d, label) {
+    BUSY.n = Math.max(0, BUSY.n + d);
+    var w = busyEl();
+    if (d > 0 && BUSY.n === 1) {
+      BUSY.t0 = Date.now();
+      w.className = 'on';
+      if (BUSY.btn && Date.now() - BUSY.at < 1500 && BUSY.btn.isConnected) { BUSY.btn.classList.add('rs-btn-busy'); BUSY.cur = BUSY.btn; }
+      clearInterval(BUSY.tick);
+      BUSY.tick = setInterval(function () {
+        var s = (Date.now() - BUSY.t0) / 1000;
+        if (s > 0.3) w.className = 'on pill';
+        var t = document.getElementById('rsBusyT'); if (t) t.textContent = (BUSY.label || 'Working…') + ' ' + s.toFixed(1) + 's';
+      }, 100);
+    }
+    if (label) BUSY.label = label;
+    if (BUSY.n === 0) {
+      clearInterval(BUSY.tick); w.className = ''; BUSY.label = '';
+      if (BUSY.cur) { BUSY.cur.classList.remove('rs-btn-busy'); BUSY.cur = null; }
+      BUSY.btn = null;
+    }
+  };
+
   RS.api = function (body) {
-    return fetch(window.REC_API, { method: 'POST', body: JSON.stringify(body) })
+    RS.busy(1, body && body.rec === 'google' || body && body.rec === 'verify' ? 'Signing in…' : body && body.rec === 'me' ? 'Opening…' : '');
+    var done = function () { RS.busy(-1); };
+    var p = fetch(window.REC_API, { method: 'POST', body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('The server did not answer (' + r.status + ') — please try again'); return r.json(); })
       .then(function (j) {
         if (j && j.ok) return j;
@@ -14,6 +54,8 @@
         if (msg === 'SIGNIN') { RS.forget(); RS.signIn(); }
         throw new Error(msg === 'SIGNIN' ? 'Please sign in again' : msg);
       });
+    p.then(done, done);
+    return p;
   };
   RS.forget = function () { RS.s = ''; RS.me = null; try { localStorage.removeItem(KEY); } catch (e) { /* ok */ } };
   RS.keep = function (me) { RS.me = me; RS.s = me.s; try { localStorage.setItem(KEY, me.s); } catch (e) { /* this tab only */ } };
@@ -65,20 +107,21 @@
       box = document.createElement('div'); box.id = 'rsSign';
       box.innerHTML = '<div class="rs-dlg" role="dialog" aria-modal="true" aria-labelledby="rsT"><div class="rs-brand">GPS HSE Department</div>' +
         '<h1 id="rsT">Sign in</h1><p class="rs-sub">Use your GPS Google account, or get a 6-digit code by e-mail.</p>' +
-        '<div id="rsG" class="rs-g"></div><div class="rs-or"><span>or</span></div>' +
+        '<div id="rsG" class="rs-g"><span class="rs-gload"><span class="rs-spin dark"></span>Loading Google sign-in…</span></div><div class="rs-or"><span>or</span></div>' +
         '<label for="rsE">E-mail</label><div class="rs-row"><input id="rsE" type="email" autocomplete="email" placeholder="name@gpsoman.com"><button type="button" id="rsSend">Send code</button></div>' +
         '<div id="rsCodeBox" style="display:none"><label for="rsC">Code from the e-mail</label><div class="rs-row"><input id="rsC" inputmode="numeric" maxlength="6" placeholder="6 digits"><button type="button" id="rsVer">Sign in</button></div></div>' +
         '<div id="rsMsg" class="rs-msg" role="status"></div><p class="rs-foot"><a href="privacy.html">Privacy</a></p></div>';
       document.body.appendChild(box);
       $('rsSend').onclick = function () {
         var e = $('rsE').value.trim(); if (!e) return;
-        this.disabled = true; msg('Sending the code…');
+        this.disabled = true; msg('<span class="rs-spin dark"></span> Sending the code…');
         RS.api({ rec: 'code', email: e }).then(function () { $('rsCodeBox').style.display = ''; msg('Code sent to ' + esc(e) + ' — it works for 15 minutes.'); $('rsC').focus(); })
           .catch(function (x) { msg(esc(x.message), true); }).then(function () { $('rsSend').disabled = false; });
       };
       $('rsVer').onclick = function () {
         msg('Checking…');
-        RS.api({ rec: 'verify', email: $('rsE').value.trim(), code: $('rsC').value.trim() }).then(function (me) { RS.keep(me); RS.go(); }).catch(function (x) { msg(esc(x.message), true); });
+        $('rsVer').disabled = true;
+        RS.api({ rec: 'verify', email: $('rsE').value.trim(), code: $('rsC').value.trim() }).then(function (me) { RS.keep(me); RS.go(); }).catch(function (x) { msg(esc(x.message), true); }).then(function () { $('rsVer').disabled = false; });
       };
       $('rsC').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('rsVer').click(); });
       RS.api({ rec: 'config' }).then(function (c) { RS.clientId = c.clientId; gsi(); }).catch(function (x) { msg(esc(x.message), true); });
@@ -93,9 +136,10 @@
     var go = function () {
       if (!(window.google && google.accounts && google.accounts.id)) return false;
       google.accounts.id.initialize({ client_id: RS.clientId, callback: function (resp) {
-        msg('Signing in…');
+        msg('<span class="rs-spin dark"></span> Signing in — please wait…');
         RS.api({ rec: 'google', idToken: resp.credential }).then(function (me) { RS.keep(me); RS.go(); }).catch(function (x) { msg(esc(x.message), true); });
       } });
+      $('rsG').innerHTML = '';
       google.accounts.id.renderButton($('rsG'), { theme: 'outline', size: 'large', text: 'continue_with', width: 280 });
       return true;
     };

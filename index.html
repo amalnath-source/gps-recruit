@@ -18,7 +18,7 @@
     border-radius: 14px; padding: 16px; transition: box-shadow .15s, transform .1s; min-height: 120px; }
   a.card:hover { box-shadow: 0 8px 22px rgba(85,70,184,.14); transform: translateY(-1px); }
   a.card.alt { border-top-color: var(--orange); }
-  a.card b { font-family: 'Space Grotesk', Inter, sans-serif; font-size: 18px; }
+  a.card b { font-family: Sora, Inter, sans-serif; font-size: 18px; }
   a.card span { color: var(--muted); font-size: 13.5px; }
   a.card i { font-style: normal; margin-top: auto; font-weight: 700; color: var(--navy); font-size: 13.5px; }
   .note { background: var(--blush); border: 1px solid var(--blushline); border-radius: 12px; padding: 12px 14px; color: #7A3A1C; margin-top: 18px; font-size: 13.5px; }
@@ -28,7 +28,7 @@
 </head>
 <body>
 <div class="hd">GPS <span>HSE</span> Department<span class="who" id="rsWho"></span></div>
-<main id="app"><p class="sub">Loading…</p></main>
+<main id="app"><div class="loading">Loading…</div></main>
 <p class="site-foot"><a href="privacy.html">Privacy</a></p>
 <script>
   function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

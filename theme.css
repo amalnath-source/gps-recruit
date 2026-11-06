@@ -1,11 +1,11 @@
 /* GPS HSE recruitment pages — Blush & Lavender. Loaded after each page's own styles, so it recolours them. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap');
 :root {
   --navy: #5546B8; --navy2: #6B5BC8; --orange: #D9825B; --amber: #A2502B; --bg: #FBF7F9; --ink: #2B2340; --text: #2B2340;
   --muted: #6B6080; --line: #EDE4EC; --soft: #F1ECFA; --soft2: #F8F4FB; --blush: #FBEDE5; --blushline: #EFC3AC; --red: #B83A3A; --green: #2E8B63;
 }
 html, body { background: var(--bg) !important; color: var(--ink); font-family: Inter, Arial, Helvetica, sans-serif !important; -webkit-font-smoothing: antialiased; }
-h1, h2, h3 { font-family: 'Space Grotesk', Inter, Arial, sans-serif; letter-spacing: -.01em; }
+h1, h2, h3, .hd { font-family: Sora, Inter, Arial, sans-serif; letter-spacing: -.01em; }
 header, .hd, .top { background: #2B2340 !important; color: #fff; border-bottom: 3px solid #7C6CD8 !important; }
 .btn, button.btn { border-radius: 10px !important; font-weight: 600; }
 .card, .box, .wrap > .bd { border-radius: 14px; }
@@ -37,3 +37,21 @@ a { color: var(--navy); }
 .hd span { color: #C9BEF6 !important; }
 .hd .who { color: #EDE7FF !important; }
 .site-foot { text-align: center; font-size: 12.5px; color: var(--muted); margin: 18px 0 28px; }
+
+/* working indicator (rs.js): top bar, "Working…" pill with seconds, spinner on the clicked button */
+@keyframes rsSpin { to { transform: rotate(360deg); } }
+@keyframes rsBar { 0% { left: -40%; } 100% { left: 100%; } }
+.rs-spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: rsSpin .8s linear infinite; vertical-align: -2px; flex: none; }
+.rs-spin.dark { border-color: rgba(85,70,184,.2); border-top-color: var(--navy); margin-right: 6px; }
+#rsBusy { display: none; }
+#rsBusy.on { display: block; }
+#rsBusy .rs-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 5000; overflow: hidden; background: rgba(124,108,216,.18); }
+#rsBusy .rs-bar::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, #D9825B, #7C6CD8, transparent); animation: rsBar 1.1s ease-in-out infinite; }
+#rsBusy .rs-pill { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5001; display: none; align-items: center; gap: 8px; background: #2B2340; color: #fff;
+  padding: 8px 16px 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 22px rgba(43,35,64,.3); font-variant-numeric: tabular-nums; }
+#rsBusy.pill .rs-pill { display: flex; }
+.rs-btn-busy { opacity: .75; pointer-events: none; position: relative; }
+.rs-btn-busy::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 8px; vertical-align: -2px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rsSpin .8s linear infinite; }
+.rs-gload { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.loading, .load { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); padding: 24px; }
+.loading::before, .load::before { content: ''; width: 18px; height: 18px; border: 3px solid rgba(85,70,184,.18); border-top-color: var(--navy); border-radius: 50%; animation: rsSpin .8s linear infinite; }
