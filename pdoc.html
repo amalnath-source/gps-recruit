@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: pdoc.html — moved from the Apps Script page ProjectDocsPage.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 860px; margin: 20px auto; background: #fff; border: 1px solid #E3E7EE; }
+  .hd { background: #1F3864; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #F5A623; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #E8711A, #F5A623); }
+  .bd { padding: 20px; }
+  h2 { color: #1F3864; font-size: 18px; margin: 0 0 4px; }
+  .muted { color: #6B7280; font-size: 12px; }
+  .doc { border: 1px solid #E3E7EE; border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+  .doc.miss { border-color: #F3C2BC; background: #FFFAF9; }
+  .doc .t { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .doc .t b { color: #1F3864; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+  .ok { background: #E6F4EC; color: #1E6B41; } .no { background: #FDECEA; color: #922B21; }
+  .form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .form .f2 { grid-column: 1 / -1; }
+  label.l { display: block; font-size: 11px; color: #6B7280; margin-bottom: 3px; }
+  input { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #E3E7EE; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  input[type=file] { padding: 5px; font-size: 12px; }
+  .btn { background: #2E8B57; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .btn.light { background: #fff; color: #1F3864; border: 1px solid #C9D3E3; }
+  .btn:disabled { opacity: .6; }
+  .lnk { background: none; border: none; color: #1F3864; text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0; }
+  .msg { margin: 8px 0; } .msg .w { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 8px; }
+  .msg .g { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 8px; }
+  .conf { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #F7F9FC; border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+  @media (max-width: 640px) { .form { grid-template-columns: 1fr 1fr; } .form .tt { grid-column: 1 / -1; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS HSE <span>Recruitment</span> — Project HSE documents</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+  var OPEN = {}, MSG = '';
+  function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function v(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+
+  function render() {
+    var h = '<h2>' + esc(D.project) + '</h2><div class="muted">Signed in as ' + esc(D.user) + '. Candidates only view these documents for their client interview ' +
+      '(no download, print or copy); their access ends after the interview.</div>' + (MSG ? '<div class="msg">' + MSG + '</div>' : '') +
+      '<div class="conf"><span>' + (D.lastConfirmed ? 'Last confirmed current: <b>' + esc(D.lastConfirmed) + '</b>' + (D.reviewDue ? ' · next check ' + esc(D.reviewDue) : '') : 'Not confirmed yet') + '</span>' +
+      '<button class="btn" onclick="confirmAll(this)">All still current</button></div>';
+    D.types.forEach(function (t, i) {
+      var list = D.docs[t] || [];
+      if (t === 'Other' || list.length) list.forEach(function (d, k) { h += docHtml(t, d, i + '_' + k); });
+      if (!list.length && t !== 'Other') h += '<div class="doc miss"><div class="t"><b>' + esc(t) + '</b><span class="pill no">missing</span></div>' + formHtml(t, null, i + '_n') + '</div>';
+      if (t === 'Other') h += '<div class="doc"><div class="t"><b>Other document</b><button class="lnk" onclick="OPEN[\'' + i + '_o\']=!OPEN[\'' + i + '_o\'];render()">' + (OPEN[i + '_o'] ? 'Close' : '+ Add another') + '</button></div>' +
+        (OPEN[i + '_o'] ? formHtml(t, null, i + '_o') : '') + '</div>';
+    });
+    document.getElementById('body').innerHTML = h;
+  }
+  function docHtml(t, d, key) {
+    return '<div class="doc"><div class="t"><span><b>' + esc(t === 'Other' ? d.title : t) + '</b> <span class="pill ok">current</span></span>' +
+      '<span class="muted">' + esc([d.docNo, d.rev ? 'Rev ' + d.rev : '', d.revDate].filter(String).join(' · ') || 'no number / revision') + '</span></div>' +
+      '<div class="muted" style="margin-top:4px"><a href="' + esc(d.link) + '" target="_blank">' + esc(d.file) + '</a> · uploaded ' + esc(d.on) + ' by ' + esc(d.by) +
+      ' · <button class="lnk" onclick="OPEN[\'' + key + '\']=OPEN[\'' + key + '\']===\'e\'?\'\':\'e\';render()">Edit no. / rev.</button> · ' +
+      '<button class="lnk" onclick="OPEN[\'' + key + '\']=OPEN[\'' + key + '\']===\'u\'?\'\':\'u\';render()">Upload a new revision</button></div>' +
+      (OPEN[key] === 'e' ? editHtml(d, key) : OPEN[key] === 'u' ? formHtml(t, d, key) : '') + '</div>';
+  }
+  function formHtml(t, d, key) {
+    return '<div class="form"><div class="tt"><label class="l">Title</label><input id="ti_' + key + '" value="' + esc(d ? d.title : t) + '"></div>' +
+      '<div><label class="l">Document no.</label><input id="no_' + key + '" value="' + esc(d ? d.docNo : '') + '"></div>' +
+      '<div><label class="l">Revision</label><input id="rv_' + key + '" placeholder="e.g. 03"></div>' +
+      '<div><label class="l">Revision date</label><input type="date" id="rd_' + key + '" max="' + D.today + '"></div>' +
+      '<div class="f2"><label class="l">File (PDF preferred)</label><input type="file" id="fi_' + key + '"></div>' +
+      '<div class="f2"><button class="btn" onclick="upload(\'' + esc(t) + '\',\'' + key + '\',\'' + esc(d && t === 'Other' ? d.id : '') + '\',this)">Upload</button></div></div>';
+  }
+  function editHtml(d, key) {
+    return '<div class="form"><div class="tt"><label class="l">Title</label><input id="ti_' + key + '" value="' + esc(d.title) + '"></div>' +
+      '<div><label class="l">Document no.</label><input id="no_' + key + '" value="' + esc(d.docNo) + '"></div>' +
+      '<div><label class="l">Revision</label><input id="rv_' + key + '" value="' + esc(d.rev) + '"></div>' +
+      '<div><label class="l">Revision date</label><input type="date" id="rd_' + key + '" value="' + esc(d.revIso) + '"></div>' +
+      '<div class="f2"><button class="btn" onclick="saveEdit(\'' + esc(d.id) + '\',\'' + key + '\',this)">Save</button></div></div>';
+  }
+  function done(r, text) { D = r.data; OPEN = {}; MSG = '<div class="g">' + esc(text) + '</div>'; render(); window.scrollTo(0, 0); }
+  function fail(btn) { return function (e) { if (btn) btn.disabled = false; MSG = '<div class="w">' + esc(e.message) + '</div>'; render(); }; }
+  function upload(t, key, replaceId, btn) {
+    var f = document.getElementById('fi_' + key);
+    if (!f || !f.files || !f.files[0]) { MSG = '<div class="w">Choose the file.</div>'; render(); return; }
+    var file = f.files[0];
+    if (file.size > 20 * 1048576) { MSG = '<div class="w">The file is over 20 MB.</div>'; render(); return; }
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    var rd = new FileReader();
+    rd.onload = function () {
+      google.script.run.withSuccessHandler(function (r) { done(r, t + ' uploaded.'); }).withFailureHandler(fail(btn))
+        .pdocLinkUpload(D.token, { type: t, title: v('ti_' + key), docNo: v('no_' + key), revision: v('rv_' + key), revDate: v('rd_' + key), replaceId: replaceId,
+          file: { name: file.name, mimeType: file.type || 'application/pdf', base64: String(rd.result).split(',')[1] } });
+    };
+    rd.readAsDataURL(file);
+  }
+  function saveEdit(id, key, btn) {
+    btn.disabled = true;
+    google.script.run.withSuccessHandler(function (r) { done(r, 'Saved.'); }).withFailureHandler(fail(btn))
+      .pdocLinkUpdate(D.token, id, { title: v('ti_' + key), docNo: v('no_' + key), revision: v('rv_' + key), revDate: v('rd_' + key) });
+  }
+  function confirmAll(btn) {
+    btn.disabled = true;
+    google.script.run.withSuccessHandler(function (r) { done(r, 'Thank you — all documents confirmed current.'); }).withFailureHandler(fail(btn)).pdocLinkConfirm(D.token);
+  }
+  render();
+</script>
+<script>RS.page('pdoc');</script>
+</body>
+</html>
+
+

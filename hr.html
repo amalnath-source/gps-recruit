@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: hr.html — moved from the Apps Script page HrUpdate.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 720px; margin: 20px auto; background: #fff; border: 1px solid #E3E7EE; }
+  .hd { background: #1F3864; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #F5A623; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #E8711A, #F5A623); }
+  .bd { padding: 20px; }
+  h2 { color: #1F3864; font-size: 18px; margin: 0 0 6px; }
+  h3 { color: #1F3864; font-size: 14px; margin: 16px 0 6px; }
+  label.l { display: block; font-size: 12px; color: #6B7280; margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #E3E7EE; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  textarea { min-height: 60px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .kv { display: grid; grid-template-columns: 170px 1fr; gap: 4px 12px; font-size: 13px; background: #F7F9FC; border-radius: 6px; padding: 10px 12px; }
+  .kv div:nth-child(odd) { color: #6B7280; }
+  .acts { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+  .acts label { border: 2px solid #E3E7EE; border-radius: 6px; padding: 9px 12px; cursor: pointer; font-weight: bold; font-size: 13px; }
+  .acts input { display: none; }
+  .acts label.on { border-color: #1F3864; background: #EAF2FB; }
+  .btn { background: #2E8B57; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .6; }
+  .muted { color: #6B7280; font-size: 12px; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; margin-top: 10px; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; background: #EEF1F6; color: #1F3864; font-size: 12px; font-weight: bold; }
+  .chk td { padding: 5px 8px 5px 0; font-size: 13px; vertical-align: middle; border-bottom: 1px solid #F0F2F6; }
+  .chk { width: 100%; border-collapse: collapse; }
+  input[type=file] { font-size: 12px; padding: 5px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .kv { grid-template-columns: 1fr; } .chk td { display: block; width: auto !important; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS HSE <span>Recruitment</span> — <span id="ttl" style="color:#fff">HR update</span></div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+  var DONE = '';
+  var PROJ = D.mode === 'project';
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+  function dmy(iso) { if (!iso) return ''; var p = iso.split('-'); return p.length === 3 ? p[2] + '-' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1] - 1] + '-' + p[0] : iso; }
+
+  function render() {
+    document.getElementById('ttl').textContent = PROJ ? 'Project update' : 'HR update';
+    var I = D.iso, T = D.txt || {};
+    var kv = function (k, v) { return v ? '<div>' + esc(k) + '</div><div>' + esc(v) + '</div>' : ''; };
+    var h = (DONE ? '<div class="ok"><b>Saved.</b> ' + esc(DONE) + '</div>' : '') +
+      '<h2>' + esc(D.id) + ' — ' + esc(D.name) + '</h2><div class="muted">' + esc(D.position) + (D.project ? ' · ' + esc(D.project) : '') +
+      (D.nat ? ' · ' + esc(D.nat) : '') + ' · signed in as ' + esc(D.user) + '</div>' +
+      '<div class="kv" style="margin-top:12px"><div>Now</div><div><span class="pill">' + esc(D.status) + '</span></div>' +
+      '<div>Next step</div><div>' + esc(D.nextAction || '—') + '</div>' +
+      (PROJ ? kv('Joined GPS', dmy(I['Joining Date'])) + kv('Employee ID', D.employeeId) + kv('Site mobilisation', dmy(I['Site Mobilisation Date'])) +
+          (D.open.length ? '<div>Prerequisites open</div><div>' + esc(D.open.join(', ')) + '</div>' : '')
+        : kv('CV to HR', dmy(I['CV to HR Date'])) + kv('Management', T['Mgmt Decision'] ? T['Mgmt Decision'] + ' ' + dmy(I['Mgmt Approval Date']) : '') + kv('Offer', dmy(I['Offer Date'])) +
+          kv('Expected joining', dmy(I['Expected Joining Date'])) + (D.national ? kv('FTW medical', dmy(I['FTW Medical Date'])) + kv('Contract signed', dmy(I['Contract Signed Date']))
+          : kv('GAMCA medical', dmy(I['GAMCA Medical Date'])) + kv('Visa', dmy(I['Visa / ID Date'])) + kv('Travel', dmy(I['Travel Date']) + (T['Flight Details'] ? ' · ' + T['Flight Details'] : '')) +
+            kv('Arrived', dmy(I['Arrival Date']))) + kv('Employee ID', D.employeeId)) + '</div>';
+    if (!D.actions.length) {
+      h += '<p style="margin-top:16px">Nothing to update at this stage. Thank you.</p>';
+      document.getElementById('body').innerHTML = h;
+      return;
+    }
+    if (!D.actions.some(function (a) { return a.key === D.action; })) D.action = D.actions[0].key;
+    h += '<h3>What happened?</h3><div class="acts">' + D.actions.map(function (a) {
+      return '<label id="lb_' + a.key + '" class="' + (a.key === D.action ? 'on' : '') + '"><input type="radio" name="act" value="' + a.key + '"' +
+        (a.key === D.action ? ' checked' : '') + ' onchange="pick(\'' + a.key + '\')">' + esc(a.label) + '</label>';
+    }).join('') + '</div><div id="fields"></div><div id="msg"></div><p><button class="btn" id="go" onclick="go()">Save</button></p>';
+    document.getElementById('body').innerHTML = h;
+    fields();
+  }
+
+  function pick(k) {
+    D.action = k;
+    D.actions.forEach(function (a) { document.getElementById('lb_' + a.key).className = a.key === k ? 'on' : ''; });
+    fields();
+  }
+
+  function dateIn(id, label, v, max) {
+    return '<div><label class="l">' + label + '</label><input type="date" id="' + id + '" value="' + esc(v || '') + '"' + (max ? ' max="' + D.today + '"' : '') + '></div>';
+  }
+  function txtIn(id, label, v, ph) { return '<div><label class="l">' + label + '</label><input id="' + id + '" value="' + esc(v || '') + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>'; }
+  function fileIn(key, label) {
+    return '<div><label class="l">' + esc(label || 'Attach the document (optional)') + '</label><input type="file" class="up" data-key="' + esc(key) + '" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></div>';
+  }
+  function sw(id, v) {
+    return '<select id="' + id + '" style="width:auto"><option value="">Required?</option><option' + (v === 'Required' ? ' selected' : '') + '>Required</option><option' +
+      (v === 'Not required' ? ' selected' : '') + '>Not required</option></select>';
+  }
+
+  function fields() {
+    var a = D.action, h = '', I = D.iso, T = D.txt || {};
+    var cur = D.actions.filter(function (x) { return x.key === a; })[0] || {};
+    var simple = { mgmt: 'Date sent for approval *', mgmt_ok: 'Approval date *', gamca: 'GAMCA medical date (or report received) *', ftw_pre: 'FTW medical date *',
+      contract: 'Contract signed on *', arrived: 'Arrived in Oman on *', site_ok: 'Reached site on *' };
+    if (simple[a]) h = '<div class="grid">' + dateIn('date', simple[a], D.today, true) + (cur.doc ? fileIn(a) : '') + '</div>';
+    else if (a === 'offer') h = '<div class="grid">' + dateIn('date', 'Offer date *', D.today, true) + dateIn('expectedJoining', 'Expected joining date', I['Expected Joining Date']) + fileIn('offer', 'Offer letter (optional)') + '</div>';
+    else if (a === 'visa') h = '<div class="grid">' + dateIn('date', 'Visa / entry permit issued on *', D.today, true) + dateIn('expiry', 'Valid until', I['Visa Expiry']) + fileIn('visa', 'Visa copy (optional)') + '</div>';
+    else if (a === 'ticket') h = '<div class="grid">' + dateIn('date', 'Travel date *', I['Travel Date']) + txtIn('flight', 'Flight', T['Flight Details'], 'e.g. WY 202 COK-MCT 10:40') + fileIn('ticket', 'Ticket (optional)') + '</div>';
+    else if (a === 'joindate') h = '<div class="grid">' + dateIn('expectedJoining', 'New expected joining date *', '') + '</div>';
+    else if (a === 'release') h = '<div class="grid">' + dateIn('date', 'Date *', D.today, true) + txtIn('releaseProject', 'Current project *', D.releaseProject) +
+      dateIn('expectedRelease', 'Expected release date', I['Expected Release Date']) + '</div>';
+    else if (a === 'declined' || a === 'mgmt_no') h = '<div class="grid">' + dateIn('date', 'Date *', D.today, true) + '</div><label class="l">Reason *</label><textarea id="reason"></textarea>';
+    else if (a === 'onboarded') h = '<div class="grid">' + dateIn('date', 'Joined GPS on *', D.today, true) +
+      '<div><label class="l">Project *</label><input id="project" list="plist" value="' + esc(D.project) + '"><datalist id="plist">' + D.projects.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</datalist></div>' +
+      txtIn('employeeId', 'Employee ID (if known)', D.employeeId) + '</div>';
+    else if (a === 'employee_id') h = '<div class="grid">' + txtIn('employeeId', 'Employee ID *', '') + '</div>';
+    else if (a === 'site_date') h = '<div class="grid">' + dateIn('siteDate', 'Site mobilisation date *', I['Site Mobilisation Date']) + '</div>' +
+      '<div class="muted">The day after this date you will be asked to confirm that the candidate reached site.</div>';
+    else if (a === 'prereq') {
+      h = '<div class="muted">Enter the date each item was completed and attach the certificate / pass. Leave empty if not done yet.</div><table class="chk">' + D.checklist.map(function (it, i) {
+        var swId = it.switchField === 'Client FTW Approval' ? 'ftw' : it.switchField === 'Site Passes Required' ? 'passes' : '';
+        var label = it.textField ? '<input id="other" value="' + esc(T[it.textField] || '') + '" placeholder="Any other requirement (write it in)">' :
+          esc(it.label) + (swId ? ' ' + sw(swId, T[it.switchField]) : '') + (it.field === 'Site Passes Date' ? '<input id="passesWhat" style="margin-top:4px" value="' + esc(T['Site Passes'] || '') + '" placeholder="which passes">' : '');
+        return '<tr><td style="width:46%">' + label + '</td><td><input type="date" id="ck_' + i + '" value="' + esc(I[it.field] || '') + '" max="' + D.today + '"></td>' +
+          '<td><input type="file" class="up" data-key="' + esc(it.field) + '" accept=".pdf,.jpg,.jpeg,.png"></td></tr>';
+      }).join('') + '</table><div class="grid">' + dateIn('siteDate', 'Site mobilisation date', I['Site Mobilisation Date']) + '</div>';
+    }
+    if (a !== 'declined' && a !== 'mgmt_no') h += '<label class="l">Remarks (optional)</label><textarea id="remarks"></textarea>';
+    document.getElementById('fields').innerHTML = h;
+    document.getElementById('msg').innerHTML = '';
+  }
+
+  function warn(t) { document.getElementById('msg').innerHTML = '<div class="warn">' + esc(t) + '</div>'; }
+
+  function readFiles(done) {
+    var ins = [].filter.call(document.querySelectorAll('input.up'), function (x) { return x.files && x.files[0]; });
+    var out = [], n = ins.length;
+    if (!n) return done(out);
+    var big = ins.filter(function (x) { return x.files[0].size > 10 * 1048576; })[0];
+    if (big) return warn(big.files[0].name + ' is over 10 MB.');
+    ins.forEach(function (x) {
+      var f = x.files[0], r = new FileReader();
+      r.onload = function () { out.push({ key: x.getAttribute('data-key'), name: f.name, mimeType: f.type || 'application/pdf', base64: String(r.result).split(',')[1] }); if (!--n) done(out); };
+      r.readAsDataURL(f);
+    });
+  }
+
+  function go() {
+    var a = D.action, p = { remarks: val('remarks') };
+    if (['mgmt', 'mgmt_ok', 'gamca', 'ftw_pre', 'contract', 'arrived', 'site_ok', 'offer', 'visa', 'ticket', 'release', 'declined', 'mgmt_no', 'onboarded'].indexOf(a) > -1) {
+      p.date = val('date'); if (!p.date) return warn('The date is required.');
+    }
+    if (a === 'offer') p.expectedJoining = val('expectedJoining');
+    if (a === 'visa') p.expiry = val('expiry');
+    if (a === 'ticket') p.flight = val('flight');
+    if (a === 'joindate') { p.expectedJoining = val('expectedJoining'); if (!p.expectedJoining) return warn('Choose the new expected joining date.'); }
+    if (a === 'release') { p.releaseProject = val('releaseProject'); p.expectedRelease = val('expectedRelease'); }
+    if (a === 'declined' || a === 'mgmt_no') { p.reason = val('reason'); if (!p.reason.trim()) return warn('Please give the reason.'); }
+    if (a === 'onboarded') { p.project = val('project'); p.employeeId = val('employeeId'); if (!p.project.trim()) return warn('The project is required.'); }
+    if (a === 'employee_id') { p.employeeId = val('employeeId'); if (!p.employeeId.trim()) return warn('Enter the Employee ID.'); }
+    if (a === 'site_date') { p.siteDate = val('siteDate'); if (!p.siteDate) return warn('Choose the date.'); }
+    if (a === 'prereq') {
+      p.items = {};
+      D.checklist.forEach(function (it, i) { p.items[it.field] = val('ck_' + i); });
+      if (document.getElementById('ftw')) p.clientFtw = val('ftw');
+      if (document.getElementById('passes')) p.passes = val('passes');
+      p.passesWhat = val('passesWhat'); p.other = val('other'); p.siteDate = val('siteDate');
+    }
+    document.getElementById('go').disabled = true;
+    document.getElementById('msg').innerHTML = '<div class="muted" style="margin-top:8px">Saving&hellip;</div>';
+    readFiles(function (files) {
+      p.files = files.map(function (f) { if (a === 'prereq') f.date = p.items[f.key] || ''; else f.date = p.date || ''; return f; });
+      var run = google.script.run.withSuccessHandler(function (r) {
+        DONE = r.msg; D = r.data; D.action = ''; render(); window.scrollTo(0, 0);
+      }).withFailureHandler(function (e) {
+        document.getElementById('go').disabled = false;
+        warn(e.message);
+      });
+      if (PROJ) run.submitPrereqUpdate(D.ref, a, p); else run.submitHrUpdate(D.ref, a, p);
+    });
+  }
+
+  render();
+</script>
+<script>RS.page('hr');</script>
+</body>
+</html>
+
+

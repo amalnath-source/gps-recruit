@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: cir.html — moved from the Apps Script page ClientResultPage.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F1F6F7; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 680px; margin: 20px auto; background: #fff; border: 1px solid #D6E4E7; }
+  .hd { background: #0E6E7E; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #BDECF2; }
+  .bar { height: 4px; background: linear-gradient(90deg, #0E6E7E, #1A9A9A, #8FD3D8); }
+  .bd { padding: 20px; }
+  h2 { color: #0E6E7E; font-size: 18px; margin: 0 0 6px; }
+  h3 { color: #0E6E7E; font-size: 14px; margin: 16px 0 6px; }
+  label.l { display: block; font-size: 12px; color: #6B7280; margin: 10px 0 4px; }
+  input, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #DCE5E8; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; font-size: 13px; background: #F4F9FA; border-radius: 6px; padding: 10px 12px; }
+  .kv div:nth-child(odd) { color: #6B7280; }
+  .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .acts label { border: 2px solid #DCE5E8; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-weight: bold; font-size: 13px; }
+  .acts input { display: none; }
+  .acts label.on { border-color: #0E6E7E; background: #E9F6F7; }
+  .acts label.pass.on { border-color: #2E8B57; background: #EAF7EF; } .acts label.fail.on { border-color: #C0392B; background: #FDF1F0; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .btn { background: #0E6E7E; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .6; }
+  .muted { color: #6B7280; font-size: 12px; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; margin-top: 10px; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+  .chk { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 13px; } .chk input { width: auto; }
+  @media (max-width: 600px) { .grid, .acts { grid-template-columns: 1fr; } .kv { grid-template-columns: 1fr; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS HSE <span>Recruitment</span> — Client interview outcome</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+  var DONE = '';
+  var MAP = { passed: 'passed', failed: 'failed', next: 'next', resched: 'rescheduled' };
+  var OPTS = [['passed', 'Took place — PASSED', 'pass'], ['failed', 'Took place — FAILED', 'fail'], ['next', 'Took place — next round', ''], ['pending', 'Took place — decision pending', ''],
+    ['rescheduled', 'Rescheduled — new date', ''], ['notheld', 'Not held / cancelled', '']];
+  function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+  var SEL = MAP[D.action] || '';
+
+  function render() {
+    var h = (DONE ? '<div class="ok"><b>Saved.</b> ' + esc(DONE) + ' Thank you.</div>' : '') +
+      '<h2>' + esc(D.candidate) + '</h2><div class="muted">' + esc(D.candidateId) + ' · signed in as ' + esc(D.user) + '</div>' +
+      '<div class="kv" style="margin-top:12px"><div>Client interview</div><div><b>' + esc(D.client || D.project) + '</b> · round ' + D.round + '</div>' +
+      '<div>Project</div><div>' + esc(D.project) + '</div><div>Position</div><div>' + esc(D.position) + '</div><div>Date</div><div>' + esc(D.when) + '</div>' +
+      '<div>Now</div><div>' + esc(D.status) + ' · result ' + esc(D.result) + (D.tookPlace ? ' · took place: ' + esc(D.tookPlace) : '') + '</div></div>';
+    if (D.done && !DONE) h += '<p style="margin-top:14px">The outcome is already recorded. You can still record a correction below.</p>';
+    if (D.done && DONE) { document.getElementById('body').innerHTML = h; return; }
+    h += '<h3>What happened?</h3><div class="acts">' + OPTS.map(function (o) {
+      return '<label class="' + o[2] + (SEL === o[0] ? ' on' : '') + '" id="lb_' + o[0] + '"><input type="radio" name="o" value="' + o[0] + '"' + (SEL === o[0] ? ' checked' : '') +
+        ' onchange="pick(\'' + o[0] + '\')">' + esc(o[1]) + '</label>';
+    }).join('') + '</div><div id="fields"></div><div id="msg"></div><p><button class="btn" id="go" onclick="go()">Save</button></p>';
+    document.getElementById('body').innerHTML = h;
+    fields();
+  }
+  function pick(k) { SEL = k; OPTS.forEach(function (o) { document.getElementById('lb_' + o[0]).classList.toggle('on', o[0] === k); }); fields(); }
+  function fields() {
+    var h = '';
+    if (!SEL) { document.getElementById('fields').innerHTML = '<div class="muted">Choose one of the options above.</div>'; return; }
+    if (SEL === 'failed') h += '<label class="l">Reason *</label><input id="reason" placeholder="e.g. Lack of permit-to-work experience">';
+    if (SEL === 'rescheduled') h += '<div class="grid"><div><label class="l">New date *</label><input type="date" id="date" min="' + D.today + '"></div><div><label class="l">Time</label><input type="time" id="time"></div></div>';
+    if (SEL === 'notheld') h += '<label class="chk"><input type="checkbox" id="noshow"> The candidate did not come (no show)</label>';
+    h += '<label class="l">' + (SEL === 'rescheduled' || SEL === 'notheld' ? 'Note' : 'Client feedback') + ' (optional)</label><textarea id="feedback"></textarea>';
+    if (['passed', 'failed', 'next', 'pending'].indexOf(SEL) > -1) h += '<label class="l">Questions the client asked (optional — one per line)</label><textarea id="questions" placeholder="e.g. How do you manage SIMOPS?"></textarea>' +
+      '<div class="muted">They help the next candidates prepare for this client.</div>';
+    document.getElementById('fields').innerHTML = h;
+    document.getElementById('msg').innerHTML = '';
+  }
+  function warn(t) { document.getElementById('msg').innerHTML = '<div class="warn">' + esc(t) + '</div>'; }
+  function go() {
+    if (!SEL) return warn('Choose what happened.');
+    var p = { outcome: SEL, feedback: val('feedback'), questions: val('questions'), reason: val('reason'), date: val('date'), time: val('time'),
+      noshow: !!(document.getElementById('noshow') && document.getElementById('noshow').checked) };
+    if (SEL === 'failed' && !p.reason.trim()) return warn('Please give the reason.');
+    if (SEL === 'rescheduled' && !p.date) return warn('Choose the new date.');
+    document.getElementById('go').disabled = true;
+    document.getElementById('msg').innerHTML = '<div class="muted" style="margin-top:8px">Saving&hellip;</div>';
+    google.script.run.withSuccessHandler(function (r) { DONE = r.msg + '.'; D = r.data; SEL = ''; render(); window.scrollTo(0, 0); })
+      .withFailureHandler(function (e) { document.getElementById('go').disabled = false; warn(e.message); }).submitClientResultLink(D.ref, p);
+  }
+  render();
+</script>
+<script>RS.page('cir');</script>
+</body>
+</html>
+
+

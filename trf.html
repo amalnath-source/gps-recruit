@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: trf.html — moved from the Apps Script page TransferRelease.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 760px; margin: 16px auto; background: #fff; border: 1px solid #E3E7EE; }
+  .hd { background: #1F3864; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #F5A623; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #E8711A, #F5A623); }
+  .bd { padding: 18px 20px; }
+  h2 { color: #1F3864; font-size: 18px; margin: 0 0 4px; }
+  h3 { color: #1F3864; font-size: 15px; margin: 22px 0 8px; border-bottom: 2px solid #F5A623; padding-bottom: 4px; }
+  .muted { color: #6B7280; font-size: 12px; }
+  label.l { display: block; font-size: 12px; color: #6B7280; margin: 12px 0 4px; }
+  input[type=text], input[type=number], input[type=date], select, textarea { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #E3E7EE; border-radius: 6px; font-family: inherit; font-size: 14px; background: #fff; }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips label { flex: 1; min-width: 100px; border: 2px solid #E3E7EE; border-radius: 6px; padding: 10px; text-align: center; font-weight: bold; cursor: pointer; font-size: 13px; }
+  .chips input { display: none; }
+  .chips label.on { border-color: #1F3864; background: #EAF2FB; color: #1F3864; }
+  .hint { background: #F7F9FC; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #4B5563; margin-top: 6px; }
+  .missing { background: #FFF8F0; border: 1px solid #F5D9B5; color: #7A4B12; border-radius: 6px; padding: 10px 12px; margin: 10px 0; font-size: 13px; }
+  .btn { background: #1F3864; color: #fff; border: none; border-radius: 6px; padding: 12px 22px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .6; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; margin: 10px 0; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 14px; }
+  .req { color: #C0392B; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS <span>HSE</span> Department</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+  function radio(name) { var e = document.querySelector('input[name="' + name + '"]:checked'); return e ? e.value : ''; }
+  function chips(name, list) {
+    return '<div class="chips">' + list.map(function (x) {
+      return '<label><input type="radio" name="' + name + '" value="' + esc(x) + '" onchange="pick(this)">' + esc(x) + '</label>';
+    }).join('') + '</div>';
+  }
+  function pick(inp) {
+    document.querySelectorAll('input[name="' + inp.name + '"]').forEach(function (x) { x.parentNode.classList.toggle('on', x.checked); });
+    var a = radio('ans'), r = radio('rep');
+    document.getElementById('fromWrap').style.display = a === 'Yes, from a later date' ? '' : 'none';
+    document.getElementById('repWrap').style.display = a && a !== 'No' ? '' : 'none';
+    document.getElementById('fillWrap').style.display = r === 'Yes' && a !== 'No' ? '' : 'none';
+    document.getElementById('need').textContent = r === 'Yes' && D.nat ? (D.nat === 'National' ? 'The employee is a national: a replacement for their rotation slot is one national (½ post).' :
+      'The employee is an expat: a replacement is one post (1 expat or 2 nationals on 14/14).') : '';
+  }
+
+  function render() {
+    var b = document.getElementById('body');
+    if (D.done) { b.innerHTML = '<h2>Release request ' + esc(D.id) + '</h2><div class="ok">Already answered: <b>' + esc(D.done.answer) + '</b> on ' + esc(D.done.on) + ' by ' + esc(D.done.by) + '. Thank you.</div>'; return; }
+    if (D.closed) { b.innerHTML = '<h2>Release request ' + esc(D.id) + '</h2><div class="ok">This transfer is closed (' + esc(D.status) + '). No action is needed.</div>'; return; }
+    b.innerHTML = '<h2>Internal transfer — release request</h2><div class="muted">Signed in as ' + esc(D.user) + ' · ' + esc(D.id) + '</div>' +
+      '<div class="hint" style="font-size:13px"><b>' + esc(D.name) + '</b>' + (D.employeeId ? ' (' + esc(D.employeeId) + ')' : '') + (D.fromPosition ? ', ' + esc(D.fromPosition) : '') +
+      '<br>From <b>' + esc(D.fromProject) + '</b> to <b>' + esc(D.toPosition) + '</b> on <b>' + esc(D.toProject) + '</b>' + (D.reason ? '<br>Reason: ' + esc(D.reason) : '') +
+      '<br><span class="muted">The move happens only after the new client approves the employee.</span></div>' +
+      '<h3>Release</h3><label class="l">Can the employee be released? <span class="req">*</span></label>' + chips('ans', D.answers) +
+      '<div id="fromWrap" style="display:none"><label class="l">Release from <span class="req">*</span></label><input type="date" id="from"></div>' +
+      '<div id="repWrap" style="display:none"><h3>Replacement</h3><label class="l">Is a replacement needed on ' + esc(D.fromProject) + '? <span class="req">*</span></label>' + chips('rep', ['Yes', 'No']) +
+      '<div id="fillWrap" style="display:none"><label class="l">Replace with <span class="req">*</span></label>' + chips('fill', D.fillWith) +
+      '<div class="muted" id="need" style="margin-top:6px"></div><label class="l">Requirements for the replacement</label><textarea id="req" placeholder="e.g. PDO approved, H2S, valid driving licence"></textarea></div></div>' +
+      '<label class="l">Remarks</label><textarea id="rem"></textarea>' +
+      '<div id="msg"></div><div style="margin-top:16px"><button class="btn" id="sendBtn" onclick="send()">Submit</button></div>';
+  }
+
+  function send() {
+    var p = { answer: radio('ans'), fromDate: val('from'), replacement: radio('rep'), fillWith: radio('fill'), requirements: val('req'), remarks: val('rem') };
+    var m = document.getElementById('msg');
+    if (!p.answer) { m.innerHTML = '<div class="warn">Please answer whether the employee can be released.</div>'; return; }
+    document.getElementById('sendBtn').disabled = true;
+    m.innerHTML = '<div class="muted" style="margin-top:8px">Sending&hellip;</div>';
+    google.script.run.withSuccessHandler(function () {
+      document.getElementById('body').innerHTML = '<h2>Thank you</h2><div class="ok">Your answer for <b>' + esc(D.name) + '</b> has been sent to the GPS HSE Department.</div>';
+    }).withFailureHandler(function (e) { document.getElementById('sendBtn').disabled = false; m.innerHTML = '<div class="warn">' + esc(e.message) + '</div>'; }).submitTransferRelease(D.ref, p);
+  }
+
+  render();
+</script>
+<script>RS.page('trf');</script>
+</body>
+</html>
+

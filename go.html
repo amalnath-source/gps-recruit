@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script>
+  /* Phase 5D: e-mail links come here (go.html?evaluate=… / ?chsem=… / ?flow=… / ?cir=… / ?pdoc=… / ?hru=… / ?pre=… / ?trf=…)
+     and go on to their page with the same details. */
+  (function () {
+    var map = { evaluate: 'eval.html', chsem: 'chsem.html', flow: 'flow.html', cir: 'cir.html', pdoc: 'pdoc.html', hru: 'hr.html', pre: 'hr.html', trf: 'trf.html' };
+    var q = new URLSearchParams(location.search), to = '';
+    Object.keys(map).forEach(function (k) { if (!to && q.has(k)) to = map[k]; });
+    location.replace((to || './') + (to ? location.search : ''));
+  })();
+</script>
+</head>
+<body style="font-family:Arial,sans-serif;padding:20px">Opening…</body>
+</html>

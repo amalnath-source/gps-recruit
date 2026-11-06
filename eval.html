@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: eval.html — moved from the Apps Script page EvaluationForm.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 860px; margin: 16px auto; background: #fff; border: 1px solid #E3E7EE; }
+  .hd { background: #1F3864; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #F5A623; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #E8711A, #F5A623); }
+  .bd { padding: 18px 20px; }
+  h2 { color: #1F3864; font-size: 18px; margin: 0 0 4px; }
+  h3 { color: #1F3864; font-size: 15px; margin: 22px 0 8px; border-bottom: 2px solid #F5A623; padding-bottom: 4px; }
+  .muted { color: #6B7280; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  .attr td { border-bottom: 1px solid #E3E7EE; padding: 8px 6px; vertical-align: top; }
+  .attr td.name { font-weight: bold; width: 26%; font-size: 13px; }
+  .opt { display: block; border: 1px solid #E3E7EE; border-radius: 6px; padding: 7px 8px; cursor: pointer; font-size: 12px; margin: 0 2px; }
+  .opt input { margin-right: 6px; }
+  .opt.on { border-color: #1F3864; background: #EAF2FB; font-weight: bold; }
+  label.l { display: block; font-size: 12px; color: #6B7280; margin: 10px 0 4px; }
+  input[type=text], input[type=number], select, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #E3E7EE; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  textarea { min-height: 60px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .outs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .outs label { flex: 1; min-width: 130px; border: 2px solid #E3E7EE; border-radius: 6px; padding: 10px; text-align: center; font-weight: bold; cursor: pointer; }
+  .outs label.on.s { border-color: #2E8B57; background: #E9F7EF; color: #1E8449; }
+  .outs label.on.k { border-color: #E8711A; background: #FFF4E0; color: #9A5B00; }
+  .outs label.on.r { border-color: #C0392B; background: #FDECEA; color: #922B21; }
+  .outs input { display: none; }
+  .q { margin-bottom: 10px; }
+  .q div { font-size: 13px; margin-bottom: 4px; }
+  .btn { background: #1F3864; color: #fff; border: none; border-radius: 6px; padding: 11px 20px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .6; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; margin: 10px 0; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 14px; }
+  .note { background: #FFF8F0; border: 1px solid #F5D9B5; border-radius: 6px; padding: 10px; color: #7A4B12; font-size: 13px; }
+  a.link { color: #1F3864; font-weight: bold; }
+  .locked { background: #F4F6FA; border: 1px dashed #C9D1DD; border-radius: 6px; padding: 10px; color: #6B7280; font-size: 13px; }
+  .cmfab { position: fixed; right: 18px; bottom: 18px; z-index: 20; background: #E8711A; color: #fff; border: none; border-radius: 24px; padding: 11px 16px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.2); font-family: inherit; }
+  .cmpanel { display: none; position: fixed; right: 18px; bottom: 70px; z-index: 20; width: 340px; max-width: calc(100vw - 36px); background: #fff; border: 1px solid #E3E7EE; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+  .cmpanel.open { display: block; }
+  .cmhd { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #1F3864; color: #fff; font-weight: bold; font-size: 13px; border-radius: 8px 8px 0 0; }
+  .cmhd button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
+  .cmpanel textarea { border: none; border-radius: 0 0 8px 8px; min-height: 180px; }
+  .bd { padding-bottom: 70px; }
+  .sigbox { border: 1px solid #E3E7EE; border-radius: 8px; padding: 12px; background: #FBFCFE; }
+  .sigmodes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sigmodes label { flex: 1; min-width: 200px; border: 2px solid #E3E7EE; border-radius: 6px; padding: 9px 10px; cursor: pointer; font-size: 13px; font-weight: bold; }
+  .sigmodes label.on { border-color: #1F3864; background: #EAF2FB; }
+  .sigmodes input { margin-right: 6px; }
+  canvas.pad { width: 100%; max-width: 460px; height: 150px; border: 1px dashed #9AA5B4; border-radius: 6px; background: #fff; touch-action: none; display: block; }
+  .sigimg { max-height: 80px; max-width: 280px; background: #fff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 4px; }
+  .sigtools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 12px; }
+  .lnk { background: none; border: none; color: #1F3864; text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0; font-family: inherit; }
+  .others { font-size: 13px; }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+    .attr td { display: block; width: auto !important; border: none; padding: 4px 0; }
+    .attr tr { display: block; border-bottom: 1px solid #E3E7EE; padding: 8px 0; }
+  }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS HSE <span>Recruitment</span> Management</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+  var R = [];
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function head() {
+    return '<h2>Interview evaluation — ' + esc(D.candidateId) + ' — ' + esc(D.name) + '</h2>' +
+      '<div class="muted">' + esc(D.position) + ' · Interview ' + esc(D.interviewId) + ' · ' + esc(D.when) + ' · Signed in as ' + esc(D.user) + '</div>';
+  }
+
+  var SIG = { mode: 'electronic', saved: '', drawn: false, upload: '', redraw: false };
+
+  function render() {
+    var M = D.mine;
+    if (M && M.locked) {
+      document.getElementById('body').innerHTML = head() + '<div class="ok" style="margin-top:14px">Your evaluation (' + esc(M.id) + ') was submitted on ' + esc(M.on) +
+        '. Outcome: <b>' + esc(M.outcome) + '</b>' + (M.final ? ' — this is the <b>final</b> evaluation' : ' — kept as panel notes') +
+        '. A signed copy has been uploaded, so it can no longer be changed.' + (M.pdf ? '<p><a class="link" target="_blank" href="' + esc(M.pdf) + '">Open PDF</a></p>' : '') + '</div>';
+      return;
+    }
+    var h = head();
+    if (M) h += '<div class="note" style="margin-top:12px">You submitted this evaluation (' + esc(M.id) + ') on ' + esc(M.on) + (M.final ? ' — it is the <b>final</b> evaluation.' : ' — it is kept as <b>panel notes</b>.') +
+      ' Your answers are filled in below; change anything and submit again to update it (the GPS form is made again).' + (M.pdf ? ' <a class="link" target="_blank" href="' + esc(M.pdf) + '">Open current PDF</a>' : '') + '</div>';
+    if (D.others.length) h += '<div class="note others" style="margin-top:8px">Also evaluated by: ' + D.others.map(function (o) {
+      return esc(o.by) + (o.outcome ? ' (' + esc(o.outcome) + (o.final ? ', final' : '') + ')' : '');
+    }).join(' · ') + '</div>';
+    if (!D.started) h += '<div class="note" style="margin-top:12px">This interview has not started yet. You can still fill the form after the interview.</div>';
+    h += '<div class="note" style="margin-top:12px">Each panel member fills their own form. One form becomes the <b>final</b> evaluation (Mr. Farid\'s first, then Amal Nath\'s, then other CHSE users, then panel members) — ' +
+      'it sets the candidate status and goes with the CV package. The others are kept as panel notes.' + (D.isChse ? '' : ' The status category is entered by CHSE users.') + '</div>';
+
+    h += '<h3>Details</h3><div class="grid"><div><label class="l">Division</label><input type="text" id="division" value="' + esc(D.division) + '"></div>' +
+      '<div><label class="l">Overall rating 1–10 (system record only — not printed on the GPS form)</label><select id="overall"><option value="">Not rated</option>' +
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return '<option>' + n + '</option>'; }).join('') + '</select></div></div>';
+
+    h += '<h3>Attributes <span class="muted">(all 9 required)</span></h3><table class="attr">' + D.attributes.map(function (a, i) {
+      return '<tr><td class="name">' + (i + 1) + '. ' + esc(a.name) + '</td>' + a.options.map(function (o, k) {
+        return '<td><label class="opt" id="o_' + i + '_' + k + '"><input type="radio" name="a' + i + '" value="' + k + '" onchange="rate(' + i + ',' + k + ')">' + esc(o) + '</label></td>';
+      }).join('') + '</tr>';
+    }).join('') + '</table>';
+
+    h += '<h3>General remarks</h3><textarea id="general"></textarea>';
+
+    h += '<h3>Outcome <span class="muted">(required)</span></h3><div class="outs">' + D.outcomes.map(function (o) {
+      var cls = o === 'Selected' ? 's' : (o === 'Keep Pending' ? 'k' : 'r');
+      return '<label class="' + cls + '" id="out_' + cls + '"><input type="radio" name="outcome" value="' + esc(o) + '" onchange="pickOut(\'' + cls + '\')">' + esc(o) + '</label>';
+    }).join('') + '</div>';
+
+    h += '<h3>Salary on appointment (Rials Omani)</h3><div class="locked">&#128274; Left blank on the form — completed by the HR team.</div>';
+    if (D.isChse) {
+      h += '<label class="l">Status <span class="muted">(ticked and circled on the form)</span></label><select id="statusCat"><option value="">Not set</option>' +
+        D.statusCategories.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('') + '</select>';
+    }
+    h += '<label class="l">Other remarks</label><input type="text" id="other">';
+
+    h += '<h3>Questions to individual</h3>' + D.questions.map(function (q, i) {
+      return '<div class="q"><div><b>' + (i + 1) + '.</b> ' + esc(q) + '</div><textarea id="q' + i + '"></textarea></div>';
+    }).join('');
+
+    h += '<h3>Interviewer\'s comments <span class="muted">(printed below the questions)</span></h3>' +
+      '<textarea id="comments" oninput="syncCm(this)" placeholder="Any comments during or after the interview"></textarea>';
+    h += '<h3>Signature</h3><div class="sigbox"><div class="muted" style="margin-bottom:8px">Printed under the signature line as <b>' + esc(String(D.signer.name || '').toUpperCase()) + '</b>' +
+      (D.signer.title ? ' — ' + esc(D.signer.title) : '') + ' (from the Master Database).</div>' +
+      '<div class="sigmodes"><label id="sm_electronic" class="on"><input type="radio" name="sigmode" checked onchange="sigMode(\'electronic\')">Sign electronically</label>' +
+      '<label id="sm_paper"><input type="radio" name="sigmode" onchange="sigMode(\'paper\')">Print and sign on paper</label></div><div id="sigArea"></div></div>';
+    h += '<div id="msg"></div><p><button class="btn" id="go" onclick="submitForm()">' + (M ? 'Update evaluation' : 'Submit evaluation') + '</button></p>';
+    h += '<button type="button" class="cmfab" id="cmFab" onclick="toggleCm()">&#9998; Comments<span id="cmDot"></span></button>' +
+      '<div class="cmpanel" id="cmPanel"><div class="cmhd">Interviewer\'s comments <button type="button" onclick="toggleCm()">&times;</button></div>' +
+      '<textarea id="cmFloat" oninput="syncCm(this)" placeholder="Write comments any time during the interview — they are saved with the form and printed below the questions"></textarea></div>';
+    document.getElementById('body').innerHTML = h;
+    if (M) prefill(M);
+    sigMode(M && /^Paper/.test(M.signature) ? 'paper' : 'electronic');
+    if (D.hasSignature) google.script.run.withSuccessHandler(function (r) { SIG.saved = r.dataUrl; sigRender(); }).getMySignature();
+  }
+
+  function prefill(M) {
+    document.getElementById('division').value = M.division || D.division;
+    document.getElementById('overall').value = M.overall || '';
+    M.ratings.forEach(function (k, i) { if (k > -1) { document.querySelector('input[name=a' + i + '][value="' + k + '"]').checked = true; rate(i, k); } });
+    document.getElementById('general').value = M.general;
+    var o = document.querySelector('input[name=outcome][value="' + M.outcome + '"]');
+    if (o) { o.checked = true; pickOut(M.outcome === 'Selected' ? 's' : M.outcome === 'Keep Pending' ? 'k' : 'r'); }
+    if (document.getElementById('statusCat')) document.getElementById('statusCat').value = M.statusCategory;
+    document.getElementById('other').value = M.other;
+    D.questions.forEach(function (q, i) { document.getElementById('q' + i).value = M.notes[i] || ''; });
+    document.getElementById('comments').value = M.comments; document.getElementById('cmFloat').value = M.comments; syncCm(document.getElementById('comments'));
+  }
+
+  /* ---------- signature: saved one, draw on the pad, or upload an image ---------- */
+  function sigMode(m) {
+    SIG.mode = m;
+    ['electronic', 'paper'].forEach(function (k) { document.getElementById('sm_' + k).className = k === m ? 'on' : ''; });
+    document.querySelector('#sm_' + m + ' input').checked = true;
+    sigRender();
+  }
+
+  function sigRender() {
+    var a = document.getElementById('sigArea');
+    if (!a) return;
+    if (SIG.mode === 'paper') {
+      a.innerHTML = '<div class="muted">The form is made without a signature. Print the PDF, sign it, scan it and upload it on the candidate page (<b>Upload signed copy</b>) — the signed copy is then used for the CV package and HR.</div>';
+      return;
+    }
+    if (SIG.saved && !SIG.redraw) {
+      a.innerHTML = '<div>Your saved signature:</div><img class="sigimg" src="' + SIG.saved + '" alt="signature"><div class="sigtools"><button type="button" class="lnk" onclick="SIG.redraw=true;sigRender()">Use a new signature</button></div>';
+      return;
+    }
+    a.innerHTML = '<div class="muted" style="margin-bottom:6px">Sign in the box with your finger or mouse' + (D.hasSignature ? '' : ' — it is saved for your next evaluations') + ', or upload a picture of your signature (PNG / JPG).</div>' +
+      '<canvas class="pad" id="pad"></canvas><div class="sigtools"><button type="button" class="lnk" onclick="padClear()">Clear</button>' +
+      '<label class="lnk" style="cursor:pointer">Upload image<input type="file" id="sigFile" accept="image/png,image/jpeg" style="display:none" onchange="sigUpload(this)"></label>' +
+      (SIG.saved ? '<button type="button" class="lnk" onclick="SIG.redraw=false;SIG.drawn=false;SIG.upload=\'\';sigRender()">Use my saved signature</button>' : '') +
+      '<label><input type="checkbox" id="sigSave" checked style="width:auto"> Save as my signature</label></div><div id="sigUp"></div>';
+    padInit();
+  }
+
+  function padInit() {
+    var c = document.getElementById('pad'), ctx, down = false, last = null;
+    var fit = function () { var r = c.getBoundingClientRect(); c.width = r.width * 2; c.height = r.height * 2; ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0B2A6F'; };
+    fit();
+    var pt = function (e) { var r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    c.onpointerdown = function (e) { down = true; last = pt(e); c.setPointerCapture(e.pointerId); };
+    c.onpointermove = function (e) { if (!down) return; var p = pt(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; SIG.drawn = true; SIG.upload = ''; };
+    c.onpointerup = c.onpointercancel = function () { down = false; };
+  }
+  function padClear() { SIG.drawn = false; SIG.upload = ''; sigRender(); }
+  function sigUpload(inp) {
+    var f = inp.files[0]; if (!f) return;
+    if (f.size > 1048576) { document.getElementById('sigUp').innerHTML = '<div class="warn">The image is larger than 1 MB.</div>'; return; }
+    var rd = new FileReader();
+    rd.onload = function () { SIG.upload = rd.result; SIG.drawn = false; document.getElementById('sigUp').innerHTML = '<img class="sigimg" src="' + rd.result + '" style="margin-top:6px">'; };
+    rd.readAsDataURL(f);
+  }
+  // A tight PNG of the drawing (white space trimmed)
+  function padImage() {
+    var c = document.getElementById('pad'), ctx = c.getContext('2d'), d = ctx.getImageData(0, 0, c.width, c.height).data;
+    var x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+    for (var y = 0; y < c.height; y++) for (var x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 0) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+    if (x1 <= x0) return '';
+    var pad = 8, w = x1 - x0 + pad * 2, h = y1 - y0 + pad * 2, o = document.createElement('canvas');
+    o.width = w; o.height = h; var oc = o.getContext('2d'); oc.fillStyle = '#FFFFFF'; oc.fillRect(0, 0, w, h); oc.drawImage(c, x0 - pad, y0 - pad, w, h, 0, 0, w, h);   // white background: no transparency in the PDF
+    return o.toDataURL('image/png');
+  }
+  function sigPayload() {
+    if (SIG.mode === 'paper') return { sign: 'paper' };
+    if (SIG.saved && !SIG.redraw) return { sign: 'electronic' };
+    var img = SIG.upload || (SIG.drawn ? padImage() : '');
+    if (!img) return null;
+    var sv = document.getElementById('sigSave');
+    return { sign: 'electronic', sigImage: img, saveSig: sv ? sv.checked : true };
+  }
+
+  function rate(i, k) {
+    R[i] = k;
+    for (var x = 0; x < 3; x++) document.getElementById('o_' + i + '_' + x).className = 'opt' + (x === k ? ' on' : '');
+  }
+
+  function pickOut(cls) {
+    ['s', 'k', 'r'].forEach(function (c) {
+      var el = document.getElementById('out_' + c);
+      if (el) el.className = c + (c === cls ? ' on' : '');
+    });
+  }
+
+  function toggleCm() { var p = document.getElementById('cmPanel'); p.classList.toggle('open'); if (p.classList.contains('open')) document.getElementById('cmFloat').focus(); }
+  function syncCm(el) {
+    var other = document.getElementById(el.id === 'comments' ? 'cmFloat' : 'comments');
+    if (other) other.value = el.value;
+    document.getElementById('cmDot').textContent = el.value.trim() ? ' \u2022' : '';
+  }
+
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+
+  function submitForm() {
+    var missing = [];
+    for (var i = 0; i < D.attributes.length; i++) if (R[i] === undefined) missing.push(i + 1);
+    var outEl = document.querySelector('input[name=outcome]:checked');
+    if (missing.length || !outEl) {
+      document.getElementById('msg').innerHTML = '<div class="warn">' +
+        (missing.length ? 'Please rate attribute(s): ' + missing.join(', ') + '. ' : '') + (outEl ? '' : 'Please select the outcome.') + '</div>';
+      return;
+    }
+    var sp = sigPayload();
+    if (!sp) { document.getElementById('msg').innerHTML = '<div class="warn">Please sign in the box (or upload your signature), or choose "Print and sign on paper".</div>'; return; }
+    if (!confirm(D.mine ? 'Update your evaluation? The GPS form is made again.' : 'Submit the evaluation?')) return;
+    var f = {
+      division: val('division'), overall: val('overall'), ratings: R.slice(0, D.attributes.length),
+      general: val('general'), outcome: outEl.value, basic: val('basic'), allowance: val('allowance'),
+      statusCategory: val('statusCat'), other: val('other'), comments: val('comments'),
+      notes: D.questions.map(function (q, i) { return val('q' + i); }),
+      sign: sp.sign, sigImage: sp.sigImage || '', saveSig: sp.saveSig !== false
+    };
+    document.getElementById('go').disabled = true;
+    document.getElementById('msg').innerHTML = '<div class="muted">Filling the GPS form and saving the PDF&hellip; (about 20–30 seconds)</div>';
+    google.script.run.withSuccessHandler(function (r) {
+      document.getElementById('body').innerHTML = head() + '<div class="ok" style="margin-top:14px"><h2 style="margin-top:0">Evaluation ' + (r.updated ? 'updated' : 'submitted') + ' (' + esc(r.id) + ')</h2>' +
+        '<p>Outcome: <b>' + esc(r.outcome) + '</b> — ' + (r.final ? (r.statusChanged ? 'this is the <b>final</b> evaluation' + (r.statusNote ? ' (' + esc(r.statusNote) + ')' : '') + '.' :
+          'this is the final evaluation so far; a CHSE user confirms the outcome.') : 'kept as <b>panel notes</b> (the final evaluation is ' + esc(r.finalBy) + '\'s).') + '</p>' +
+        (r.pdf ? '<p><a class="link" target="_blank" href="' + esc(r.pdf) + '">Open the PDF</a>' + (r.paper ? ' — print it, sign it and upload the scan on the candidate page.' : '') + '</p>' : '') +
+        (r.emailNote ? '<p class="muted">' + esc(r.emailNote) + '</p>' : '') +
+        (D.isChse ? '<p><a class="link" href="' + esc(D.appUrl) + '?candidate=' + encodeURIComponent(D.candidateId) + '">Open candidate page</a></p>' : '') + '</div>';
+    }).withFailureHandler(function (e) {
+      document.getElementById('go').disabled = false;
+      document.getElementById('msg').innerHTML = '<div class="warn">' + esc(e.message) + '</div>';
+    }).submitEvaluation(D.interviewId, f);
+  }
+
+  render();
+</script>
+<script>RS.page('eval');</script>
+</body>
+</html>
+
+

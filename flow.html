@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: flow.html — moved from the Apps Script page FlowAction.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 680px; margin: 20px auto; background: #fff; border: 1px solid #E3E7EE; }
+  .hd { background: #1F3864; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #F5A623; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #E8711A, #F5A623); }
+  .bd { padding: 20px; }
+  h2 { color: #1F3864; font-size: 18px; margin: 0 0 6px; }
+  h3 { color: #1F3864; font-size: 14px; margin: 16px 0 6px; }
+  label.l { display: block; font-size: 12px; color: #6B7280; margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #E3E7EE; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .opts { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+  .opts label { flex: 1; min-width: 110px; border: 2px solid #E3E7EE; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; font-weight: bold; }
+  .opts input { display: none; }
+  .opts label.on { border-color: #1F3864; background: #EAF2FB; }
+  .item { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; border-bottom: 1px dashed #EEF1F6; font-size: 13px; }
+  .item input { width: auto; margin-top: 2px; }
+  .btn { background: #1F3864; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn.orange { background: #E8711A; } .btn.red { background: #C0392B; } .btn.green { background: #2E8B57; }
+  .btn:disabled { opacity: .6; }
+  .muted { color: #6B7280; font-size: 12px; }
+  .msg { margin-top: 12px; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; }
+  .note { background: #FFF8F0; border: 1px solid #F5D9B5; border-radius: 6px; padding: 10px; color: #7A4B12; font-size: 13px; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 14px; }
+  a.link { color: #1F3864; font-weight: bold; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS HSE <span>Recruitment</span> Management</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+  function render() {
+    var h = '<h2>' + esc(D.title) + '</h2><div class="muted">' + esc(D.id) + ' — ' + esc(D.name) + ' · ' + esc(D.position) + ' · now ' + esc(D.status) +
+      ' · signed in as ' + esc(D.user) + '</div>';
+    var a = D.action;
+    if (a === 'send') {
+      h += '<div class="note" style="margin-top:12px">This request goes to <b>' + esc(D.email) + '</b>. Untick anything you do not need; reminders follow automatically every 3 days (2 times).</div>' +
+        (D.answers.length ? '<h3>Information</h3>' + D.answers.map(function (x, i) { return '<label class="item"><input type="checkbox" id="qa_' + i + '" checked>' + esc(x) + '</label>'; }).join('') : '') +
+        (D.docs.length ? '<h3>Documents</h3>' + D.docs.map(function (x, i) { return '<label class="item"><input type="checkbox" id="qd_' + i + '" checked>' + esc(x) + '</label>'; }).join('') : '') +
+        '<label class="l">Message to add (optional)</label><textarea id="message" placeholder="e.g. Please send the certificates by Thursday."></textarea>';
+      h += btns('Send the request to the candidate', 'orange');
+    } else if (a === 'schedule') {
+      h += (D.testMode ? '<div class="note" style="margin-top:12px">TEST MODE is on: emails come only to you and no calendar guests are added.</div>' : '') +
+        '<div class="grid"><div><label class="l">Date *</label><input type="date" id="date" min="' + today() + '"></div>' +
+        '<div><label class="l">Time *</label><input type="time" id="time" value="10:00"></div>' +
+        '<div><label class="l">Duration (min)</label><input type="number" id="duration" value="' + esc(D.duration) + '"></div>' +
+        '<div><label class="l">Mode</label><select id="mode" onchange="modeChanged()"><option>In-Person</option><option>Google Meet</option></select></div></div>' +
+        '<div id="locwrap"><label class="l">Location</label><input id="location" value="' + esc(D.office) + '"></div>' +
+        '<label class="l">Panel emails (comma separated)</label><input id="panel" value="' + esc(D.panel) + '">' +
+        '<label class="l">Message to the candidate (optional)</label><textarea id="message"></textarea>';
+      h += btns('Create event and send invitation', 'green');
+    } else if (a === 'select') {
+      h += '<p>The candidate becomes <b>Selected</b>. Within 30 minutes you get the <b>Ready to submit</b> email with the matching vacancies.</p>' +
+        '<label class="l">Remarks (optional)</label><textarea id="remarks"></textarea>' + btns('Select', 'green');
+    } else if (a === 'reject') {
+      h += '<p>The candidate becomes <b>' + (D.stage === 'Hold' ? 'CHSEM Rejected' : 'Not Suitable') + '</b> (closed).</p><label class="l">Reason *</label><textarea id="remarks"></textarea>' + btns('Reject', 'red');
+    } else if (a === 'confirm') {
+      h += '<div class="opts">' + ['Selected', 'Keep Pending', 'Rejected'].map(function (o) {
+        return '<label class="' + (o === D.outcome ? 'on' : '') + '" id="lb_' + o.replace(' ', '') + '"><input type="radio" name="out" value="' + o + '"' +
+          (o === D.outcome ? ' checked' : '') + ' onchange="pickOut(\'' + o + '\')">' + o + '</label>';
+      }).join('') + '</div><label class="l">Remarks (required for Keep Pending and Rejected)</label><textarea id="remarks"></textarea>' + btns('Confirm outcome', '');
+    } else if (a === 'noshow') {
+      h += '<p>Interview <b>' + esc(D.interviewId) + '</b> is marked as no-show and the candidate becomes <b>No Show</b>. You can reschedule or close it afterwards.</p>' +
+        '<label class="l">Remarks (optional)</label><textarea id="remarks"></textarea>' + btns('Mark no-show', 'red');
+    } else if (a === 'pool') {
+      h += '<label class="l">Pool rating *</label><select id="rating"><option value="">—</option>' + D.ratings.map(function (r) { return '<option>' + esc(r) + '</option>'; }).join('') + '</select>' +
+        '<label class="l">Reason *</label><input id="reason" placeholder="e.g. Good profile — no current vacancy">' + btns('Move to Talent Pool', 'orange');
+    } else if (a === 'approve') {
+      h += '<p>The candidate becomes <b>CHSEM Approved</b> and the enquiry email goes to the candidate straight away.</p>' +
+        '<label class="l">Remarks (optional)</label><textarea id="remarks"></textarea>' + btns('Approve', 'green');
+    } else if (a === 'keephold') {
+      h += '<p>The candidate stays <b>On Hold</b>. You will be asked again in ' + esc(D.holdDays) + ' days.</p>' +
+        '<label class="l">Reason *</label><textarea id="remarks" placeholder="e.g. Waiting for the SPETCO vacancy to be confirmed"></textarea>' + btns('Keep on hold', '');
+    } else if (a === 'remind') {
+      h += '<p>One more reminder goes to <b>' + esc(D.email) + '</b> on the same email thread. If there is still no reply, you will be asked again in ' + esc(D.waitDays) + ' days.</p>' +
+        '<label class="l">Message to add (optional)</label><textarea id="message" placeholder="e.g. Please reply by Thursday — the client interview slots are filling up."></textarea>' + btns('Send the reminder', '');
+    } else if (a === 'wait') {
+      h += '<p>Nothing is sent now. If there is still no reply, you will be asked again in ' + esc(D.waitDays) + ' days.</p>' + btns('Wait', '');
+    } else if (a === 'close') {
+      h += '<p>The candidate becomes <b>Withdrawn</b> (closed). The record and documents are kept.</p><label class="l">Reason *</label><textarea id="remarks" placeholder="e.g. No reply after 3 reminders and a call"></textarea>' + btns('Close the candidate', 'red');
+    } else if (a === 'keep') {
+      h += '<p>The candidate stays in the Talent Pool. The next review is in ' + esc(D.reviewMonths) + ' months.</p>' +
+        '<label class="l">Pool rating</label><select id="rating">' + D.ratings.map(function (r) { return '<option' + (r === D.rating ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('') + '</select>' +
+        '<label class="l">Remarks (optional)</label><textarea id="remarks"></textarea>' + btns('Keep', 'green');
+    } else if (a === 'contact') {
+      h += '<p>A short email goes to <b>' + esc(D.email || 'no email address') + '</b>' + (D.lastContacted ? ' (last contacted ' + esc(D.lastContacted) + ')' : '') +
+        ': still interested? location, notice period, expected salary, updated CV and new certificates. The reply is read automatically — documents are filed and you get an alert.</p>' +
+        '<label class="l">Message to add (optional)</label><textarea id="message" placeholder="e.g. We expect new PDO vacancies next month."></textarea>' + btns('Send the email', '');
+    }
+    h += '<div style="margin-top:18px">' + D.summaryHtml + '</div>';
+    document.getElementById('body').innerHTML = h;
+    if (a === 'confirm' && D.outcome) pickOut(D.outcome);
+  }
+
+  function btns(label, cls) {
+    return '<div class="msg" id="msg"></div><p><button class="btn ' + cls + '" id="go" onclick="go()">' + esc(label) + '</button> ' +
+      '<a class="link" style="margin-left:10px" href="' + esc(D.appUrl) + '?candidate=' + encodeURIComponent(D.id) + '">Open candidate page</a></p>';
+  }
+  function modeChanged() { document.getElementById('locwrap').style.display = val('mode') === 'Google Meet' ? 'none' : ''; }
+  function pickOut(o) {
+    D.outcome = o;
+    ['Selected', 'KeepPending', 'Rejected'].forEach(function (k) { var el = document.getElementById('lb_' + k); if (el) el.className = k === o.replace(' ', '') ? 'on' : ''; });
+  }
+  function warn(t) { document.getElementById('msg').innerHTML = '<div class="warn">' + esc(t) + '</div>'; }
+
+  function go() {
+    var a = D.action, p = {};
+    if (a === 'send') {
+      var ans = D.answers.filter(function (x, i) { return document.getElementById('qa_' + i).checked; });
+      var docs = D.docs.filter(function (x, i) { return document.getElementById('qd_' + i).checked; });
+      var dropped = D.answers.length + D.docs.length - ans.length - docs.length;
+      p.message = val('message') + (dropped ? '' : '');
+      p.skip = D.answers.filter(function (x, i) { return !document.getElementById('qa_' + i).checked; })
+        .concat(D.docs.filter(function (x, i) { return !document.getElementById('qd_' + i).checked; }));
+      if (!ans.length && !docs.length) return warn('Tick at least one item, or close this page.');
+    } else if (a === 'schedule') {
+      p = { date: val('date'), time: val('time'), duration: val('duration'), mode: val('mode'), location: val('location'), panel: val('panel'), message: val('message') };
+      if (!p.date || !p.time) return warn('Date and time are required.');
+    } else if (a === 'pool') {
+      p = { rating: val('rating'), reason: val('reason') };
+      if (!p.rating || !p.reason.trim()) return warn('Rating and reason are required.');
+    } else if (a === 'remind' || a === 'contact' || a === 'wait') {
+      p = { message: val('message') };
+    } else if (a === 'approve' || a === 'keephold' || a === 'close' || a === 'keep') {
+      p = { remarks: val('remarks'), rating: val('rating') };
+      if (a !== 'approve' && a !== 'keep' && !p.remarks.trim()) return warn('Please give the reason.');
+    } else {
+      p = { remarks: val('remarks'), outcome: D.outcome, interviewId: D.interviewId };
+      if (a === 'confirm' && !D.outcome) return warn('Choose the outcome.');
+      if ((a === 'reject' || (a === 'confirm' && D.outcome !== 'Selected')) && !p.remarks.trim()) return warn('Remarks are required.');
+    }
+    document.getElementById('go').disabled = true;
+    document.getElementById('msg').innerHTML = '<div class="muted">Saving&hellip;</div>';
+    google.script.run.withSuccessHandler(function (r) {
+      document.getElementById('body').innerHTML = '<div class="ok"><h2 style="margin-top:0">Done</h2><p>' + esc(r.msg) + '</p>' +
+        '<p><a class="link" href="' + esc(D.appUrl) + '?candidate=' + encodeURIComponent(D.id) + '">Open candidate page</a></p></div>';
+    }).withFailureHandler(function (e) {
+      document.getElementById('go').disabled = false;
+      warn(e.message);
+    }).flowAction(D.id, D.token, a, p);
+  }
+
+  render();
+</script>
+<script>RS.page('flow');</script>
+</body>
+</html>
+
+

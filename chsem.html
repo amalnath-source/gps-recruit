@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!-- GPS HSE — Phase 5D: chsem.html — moved from the Apps Script page ChsemDecision.html (same code; data from bootPage). -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<script src="pages.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 680px; margin: 20px auto; background: #fff; border: 1px solid #E3E7EE; }
+  .hd { background: #1F3864; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #F5A623; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #E8711A, #F5A623); }
+  .bd { padding: 20px; }
+  h2 { color: #1F3864; font-size: 18px; margin: 0 0 8px; }
+  .opts { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 10px; }
+  .opts label { flex: 1; min-width: 120px; border: 2px solid #E3E7EE; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; font-weight: bold; }
+  .opts input { display: none; }
+  .opts label.on.approve { border-color: #2E8B57; background: #E9F7EF; color: #1E8449; }
+  .opts label.on.hold { border-color: #E8711A; background: #FFF4E0; color: #9A5B00; }
+  .opts label.on.reject { border-color: #C0392B; background: #FDECEA; color: #922B21; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 80px; padding: 8px 10px; border: 1px solid #E3E7EE; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  .btn { background: #1F3864; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .6; }
+  .muted { color: #6B7280; font-size: 12px; }
+  .msg { margin-top: 12px; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 14px; }
+  a.link { color: #1F3864; font-weight: bold; }
+</style>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* Phase 5D page frame (sign-in / message box) */
+  #pgBox { padding: 24px 16px; }
+  .pg-card { max-width: 620px; margin: 30px auto; background: #fff; border: 1px solid #EDE4EC; border-radius: 12px; padding: 22px 24px; box-shadow: 0 6px 24px rgba(40,30,80,.08); }
+  .pg-brand { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #C9704A; font-weight: bold; }
+  .pg-card h1 { font-size: 20px; color: #5546B8; margin: 6px 0 12px; }
+  .pg-msg { font-size: 14px; line-height: 1.5; color: #1E2430; }
+  .pg-msg.bad { color: #922B21; }
+  .pg-foot { font-size: 12px; color: #6B6080; margin: 18px 0 0; }
+  .pg-foot a, .pg-msg a { color: #5546B8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS HSE <span>Recruitment</span> Management</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script type="text/x-page" id="pageJs">
+  var D = window.D_BOOT;
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function render() {
+    var keys = ['approve', 'hold', 'reject'];
+    document.getElementById('body').innerHTML =
+      '<h2>CHSEM decision — ' + esc(D.id) + ' — ' + esc(D.name) + '</h2>' +
+      '<div class="muted">Signed in as ' + esc(D.user) + '</div>' + D.summaryHtml +
+      '<div class="opts">' + keys.map(function (k) {
+        return '<label class="' + k + (k === D.decisionKey ? ' on' : '') + '" id="lb_' + k + '"><input type="radio" name="dec" value="' + k + '"' +
+          (k === D.decisionKey ? ' checked' : '') + ' onchange="pick(\'' + k + '\')">' + esc(D.decisions[k].label) + '</label>';
+      }).join('') + '</div>' +
+      '<div><label class="muted" id="remLabel"></label><textarea id="rem" placeholder="Remarks"></textarea></div>' +
+      '<div class="msg" id="msg"></div>' +
+      '<p><button class="btn" id="go" onclick="confirmDecision()">Confirm decision</button></p>';
+    pick(D.decisionKey);
+  }
+
+  function pick(k) {
+    D.decisionKey = k;
+    ['approve', 'hold', 'reject'].forEach(function (x) {
+      document.getElementById('lb_' + x).className = x + (x === k ? ' on' : '');
+    });
+    document.getElementById('remLabel').textContent = k === 'approve' ? 'Remarks (optional)' : 'Remarks (required)';
+  }
+
+  function confirmDecision() {
+    var rem = document.getElementById('rem').value.trim();
+    if (D.decisionKey !== 'approve' && !rem) {
+      document.getElementById('msg').innerHTML = '<div class="warn">Please enter remarks for Hold or Reject.</div>';
+      return;
+    }
+    document.getElementById('go').disabled = true;
+    document.getElementById('msg').innerHTML = '<div class="muted">Saving&hellip;</div>';
+    google.script.run.withSuccessHandler(function (r) {
+      document.getElementById('body').innerHTML =
+        '<div class="ok"><h2 style="margin-top:0">Decision recorded: ' + esc(r.decision) + '</h2>' +
+        '<p>' + esc(D.id) + ' — ' + esc(D.name) + ' is now <b>' + esc(r.status) + '</b>.</p>' +
+        (r.enquiry ? '<p>' + (r.enquiry.sent ? 'The enquiry email was sent to the candidate automatically.' : esc(r.enquiry.note)) + '</p>' : '') +
+        (r.emailNote ? '<p class="muted">' + esc(r.emailNote) + '</p>' : '') +
+        '<p><a class="link" href="' + esc(D.appUrl) + '?candidate=' + encodeURIComponent(D.id) + '">Open candidate page</a></p></div>';
+    }).withFailureHandler(function (e) {
+      document.getElementById('go').disabled = false;
+      document.getElementById('msg').innerHTML = '<div class="warn">' + esc(e.message) + '</div>';
+    }).recordChsemDecision(D.id, D.decisionKey, rem, D.token);
+  }
+
+  render();
+</script>
+<script>RS.page('chsem');</script>
+</body>
+</html>
+
+
