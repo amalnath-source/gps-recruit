@@ -1,0 +1,39 @@
+/* GPS HSE recruitment pages — Blush & Lavender. Loaded after each page's own styles, so it recolours them. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+:root {
+  --navy: #5546B8; --navy2: #6B5BC8; --orange: #D9825B; --amber: #A2502B; --bg: #FBF7F9; --ink: #2B2340; --text: #2B2340;
+  --muted: #6B6080; --line: #EDE4EC; --soft: #F1ECFA; --soft2: #F8F4FB; --blush: #FBEDE5; --blushline: #EFC3AC; --red: #B83A3A; --green: #2E8B63;
+}
+html, body { background: var(--bg) !important; color: var(--ink); font-family: Inter, Arial, Helvetica, sans-serif !important; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: 'Space Grotesk', Inter, Arial, sans-serif; letter-spacing: -.01em; }
+header, .hd, .top { background: #2B2340 !important; color: #fff; border-bottom: 3px solid #7C6CD8 !important; }
+.btn, button.btn { border-radius: 10px !important; font-weight: 600; }
+.card, .box, .wrap > .bd { border-radius: 14px; }
+input, select, textarea { border-radius: 10px !important; border-color: #E2D8E9 !important; font-family: inherit; }
+input:focus, select:focus, textarea:focus { outline: 2px solid rgba(85,70,184,.3); outline-offset: 0; }
+a { color: var(--navy); }
+
+/* who is signed in (top right) */
+.rs-who { position: fixed; top: 8px; right: 12px; z-index: 50; font-size: 12px; color: #EDE7FF; }
+.rs-who a { color: #C9BEF6; }
+
+/* sign-in box */
+#rsSign { position: fixed; inset: 0; z-index: 4000; background: rgba(43,35,64,.55); display: none; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+.rs-dlg { background: #fff; border-radius: 18px; width: 420px; max-width: 100%; padding: 24px 24px 16px; box-shadow: 0 24px 60px rgba(43,35,64,.35); }
+.rs-brand { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--navy); }
+.rs-dlg h1 { margin: 6px 0 2px; font-size: 26px; color: var(--ink); }
+.rs-sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+.rs-g { min-height: 44px; display: flex; justify-content: center; }
+.rs-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 14px 0; }
+.rs-or::before, .rs-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.rs-dlg label { display: block; font-size: 12px; font-weight: 700; color: #4A3F63; margin: 8px 0 4px; }
+.rs-row { display: flex; gap: 8px; }
+.rs-row input { flex: 1; font-size: 15px; padding: 10px 12px; border: 1px solid #E2D8E9; min-width: 0; }
+.rs-row button { font: inherit; font-weight: 700; padding: 10px 14px; border: 0; border-radius: 10px; background: var(--navy); color: #fff; cursor: pointer; white-space: nowrap; }
+.rs-row button:disabled { opacity: .6; }
+.rs-msg { min-height: 20px; margin-top: 10px; font-size: 13px; color: #2E6B52; }
+.rs-msg.bad { color: var(--red); }
+.rs-foot { text-align: center; font-size: 12px; margin: 12px 0 0; }
+.hd span { color: #C9BEF6 !important; }
+.hd .who { color: #EDE7FF !important; }
+.site-foot { text-align: center; font-size: 12.5px; color: var(--muted); margin: 18px 0 28px; }

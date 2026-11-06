@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- GPS RECRUITMENT — the candidate's own upload page (CandUpload.gs). Key-only: the link is the access. -->
+<style>
+:root { --navy: #5546B8; --orange: #D9825B; --bg: #F3F5F9; --ink: #1d2433; --muted: #66708a; --line: #E1E6EF; --red: #B71C1C; --redbg: #FDECEC; --green: #1B7F3B; --greenbg: #E7F5EC; --amber: #9A5B00; --amberbg: #FFF4E0; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+header { background: var(--navy); color: #fff; padding: 12px 16px; font-weight: bold; border-bottom: 3px solid var(--orange); }
+main { max-width: 860px; margin: 0 auto; padding: 16px; }
+.card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(20,30,60,.08); padding: 14px 16px; margin-bottom: 14px; }
+h1 { font-size: 18px; color: var(--navy); margin: 0 0 4px; } h2 { font-size: 15px; color: var(--navy); margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+h3 { font-size: 13px; color: var(--navy); margin: 12px 0 6px; }
+.muted { color: var(--muted); } .small { font-size: 12px; }
+input, select, textarea { font: inherit; padding: 8px 9px; border: 1px solid #C9D1DE; border-radius: 6px; width: 100%; background: #fff; color: var(--ink); }
+textarea { min-height: 60px; resize: vertical; }
+label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+.btn { background: var(--navy); color: #fff; border: 0; border-radius: 6px; padding: 11px 22px; font-size: 15px; cursor: pointer; }
+.btn:disabled { opacity: .5; }
+.chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #EEF1F5; color: #5f6b7a; font-weight: normal; }
+.chip.ok { background: var(--greenbg); color: var(--green); } .chip.bad { background: var(--redbg); color: var(--red); } .chip.warn { background: var(--amberbg); color: var(--amber); }
+.item.need { border-left: 4px solid var(--red); }
+.slot { background: #FFF9EE; border: 1px solid #F3DDB0; border-radius: 8px; padding: 10px; margin-top: 8px; }
+.slot .t { font-weight: bold; color: #7A4B12; font-size: 13px; margin-bottom: 6px; }
+.row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; align-items: end; }
+.drop { border: 2px dashed #B8C4D8; border-radius: 8px; padding: 12px; text-align: center; color: var(--muted); cursor: pointer; font-size: 13px; background: #FAFBFD; }
+.drop.over { border-color: var(--navy); background: #EEF3FB; color: var(--navy); }
+.files { font-size: 12px; color: var(--green); margin-top: 4px; }
+.files span { display: inline-block; margin-right: 10px; } .files a { color: var(--red); text-decoration: none; margin-left: 3px; cursor: pointer; }
+.decl { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.decl > label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13px; cursor: pointer; margin: 0; }
+.decl > label input { width: auto; }
+.decl textarea { margin-top: 6px; }
+.have { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.msg { padding: 10px 12px; border-radius: 8px; margin: 10px 0; } .msg.ok { background: var(--greenbg); color: #0f5428; } .msg.err { background: var(--redbg); color: var(--red); } .msg.info { background: var(--amberbg); color: #6d4300; }
+.loading { padding: 40px; text-align: center; color: var(--muted); }
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<title>Your documents — GPS HSE</title>
+</head>
+<body>
+<header>GPS HSE Department — your documents</header>
+<main id="app"><div class="loading">Loading…</div></main>
+<script>
+var RSQ = {}; new URLSearchParams(location.search).forEach(function (v, k) { RSQ[k] = v; });
+var REF = RSQ.cu || '', TOKEN = RSQ.t || '';
+var D = null, F = {};   // F[key] = { slot: [File], other: [File] }
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function run(fn) { var a = [].slice.call(arguments, 1); return new Promise(function (res, rej) { google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn].apply(null, a); }); }
+function note(id, cls, h) { $(id).innerHTML = '<div class="msg ' + cls + '">' + h + '</div>'; }
+function fileData(f) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res({ name: f.name, mime: f.type, data: String(r.result).split(',')[1] }); }; r.onerror = rej; r.readAsDataURL(f); }); }
+function wireDrop(el, multi, onFiles) {
+  var inp = document.createElement('input'); inp.type = 'file'; inp.multiple = multi; inp.accept = '.pdf,.jpg,.jpeg,.png,.doc,.docx'; inp.style.display = 'none'; el.appendChild(inp);
+  el.addEventListener('click', function (e) { if (e.target !== inp) inp.click(); });
+  inp.addEventListener('change', function () { onFiles([].slice.call(inp.files)); inp.value = ''; });
+  el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave', function () { el.classList.remove('over'); });
+  el.addEventListener('drop', function (e) { e.preventDefault(); el.classList.remove('over'); onFiles([].slice.call(e.dataTransfer.files)); });
+}
+
+function load() { run('getCandUploadPage', REF, TOKEN).then(function (d) { D = d; draw(); }).catch(function (e) { $('app').innerHTML = '<div class="card"><div class="msg err">' + esc(e.message) + '</div></div>'; }); }
+
+function chipOf(x) {
+  if (x.declared) return '<span class="chip warn">told us: not available</span>';
+  if (x.missing) return '<span class="chip bad">' + (x.slot && x.count ? 'item 1 still needed' : 'needed') + '</span>';
+  if (x.count) return '<span class="chip ok">' + x.count + ' on file</span>';
+  return '<span class="chip">if you have it</span>';
+}
+function draw() {
+  var need = D.items.filter(function (x) { return x.missing; }).length;
+  var h = '<div class="card"><h1>Dear ' + esc(D.name.split(' ')[0]) + ',</h1><p style="margin:6px 0 0">For your application (<b>' + esc(D.position || 'HSE') + '</b>, ' + esc(D.id) + ') please upload the documents below — PDF or clear photos, up to ' + D.maxMb + ' MB each. ' +
+    'You can add <b>several files</b> for each item. If you do <b>not</b> have a document, tick the box and tell us why.</p>' +
+    (need ? '<p class="small" style="color:var(--red);margin:8px 0 0"><b>' + need + '</b> item(s) still needed.</p>' : '<p class="small" style="color:var(--green);margin:8px 0 0">Everything required is on file — you can still add more.</p>') + '</div>';
+  h += D.items.map(function (x, i) {
+    var s = x.slot, b = '<div class="card item' + (x.missing ? ' need' : '') + '"><h2>' + esc(x.name) + ' ' + chipOf(x) + '</h2>' +
+      (x.titles.length ? '<div class="have">On file: ' + esc(x.titles.join(' · ')) + '</div>' : '');
+    if (s) {
+      b += '<div class="slot"><div class="t">1. ' + esc(s.label) + (s.have ? ' <span class="chip ok">on file</span>' : '') + '</div><div class="row">' +
+        (s.levels ? '<div><label>Which one?</label><select id="lv' + i + '"><option value="">— choose —</option>' + s.levels.map(function (l) { return '<option>' + esc(l) + '</option>'; }).join('') + '</select></div>'
+          : '<div><label>Qualification (e.g. B.Tech Mechanical Engineering)</label><input id="qn' + i + '" value="' + esc(D.qual) + '"></div>') +
+        '<div><div class="drop" id="dzs' + i + '">' + (s.have ? 'Upload again to replace' : 'Drop the file here or tap to choose') + '</div><div class="files" id="fls' + i + '"></div></div></div></div>' +
+        '<h3>' + esc(x.otherLabel) + ' <span class="muted small" style="font-weight:normal">— any number</span></h3><div class="drop" id="dz' + i + '">Drop files here or tap to choose (several at once)</div><div class="files" id="fl' + i + '"></div>';
+    } else b += '<div class="drop" id="dz' + i + '" style="margin-top:8px">Drop files here or tap to choose (several at once)</div><div class="files" id="fl' + i + '"></div>';
+    if (x.missing || x.declared || s) b += '<div class="decl"><label><input type="checkbox" id="dc' + i + '"' + (x.declared ? ' checked' : '') + ' onchange="$(\'dr' + i + '\').style.display=this.checked?\'\':\'none\'"> ' + esc(x.declare) + '</label>' +
+      '<textarea id="dr' + i + '" placeholder="Please tell us why (for example: I have not worked on a client-approved post yet)"' + (x.declared ? '' : ' style="display:none"') + '>' + esc(x.declared || '') + '</textarea></div>';
+    return b + '</div>';
+  }).join('');
+  if (D.others.length) h += '<div class="card"><h2>Anything else</h2><p class="small muted" style="margin:6px 0 8px">Other documents you would like to send (training certificates, ID, medical…).</p><div class="row">' +
+    '<div><label>What is it?</label><select id="otype">' + D.others.map(function (o) { return '<option value="' + esc(o.key) + '">' + esc(o.name) + '</option>'; }).join('') + '</select></div>' +
+    '<div><div class="drop" id="dzx">Drop files here or tap to choose</div><div class="files" id="flx"></div></div></div></div>';
+  h += '<div class="card"><label>Anything you want to tell us (optional)</label><textarea id="nt"></textarea><div id="out"></div><div style="text-align:right;margin-top:10px"><button class="btn" id="go" onclick="send()">Send my documents</button></div></div>';
+  $('app').innerHTML = h;
+  D.items.forEach(function (x, i) {
+    F[x.key] = F[x.key] || { slot: [], other: [] };
+    if (x.slot) wireDrop($('dzs' + i), false, function (fs) { F[x.key].slot = fs.slice(0, 1); show(); });
+    wireDrop($('dz' + i), true, function (fs) { F[x.key].other = F[x.key].other.concat(fs); show(); });
+  });
+  if ($('dzx')) { F.__x = F.__x || []; wireDrop($('dzx'), true, function (fs) { F.__x = F.__x.concat(fs.map(function (f) { return { f: f, key: $('otype').value }; })); show(); }); }
+  show();
+}
+function show() {
+  var list = function (arr, js) { return arr.map(function (f, k) { return '<span>✓ ' + esc(f.name || f.f.name) + '<a onclick="' + js + '(' + k + ')" title="Remove">✕</a></span>'; }).join(''); };
+  D.items.forEach(function (x, i) {
+    var G = F[x.key];
+    if (x.slot && $('fls' + i)) $('fls' + i).innerHTML = list(G.slot, 'rmS' + i + '_');
+    if ($('fl' + i)) $('fl' + i).innerHTML = list(G.other, 'rmO' + i + '_');
+    window['rmS' + i + '_'] = function (k) { G.slot.splice(k, 1); show(); };
+    window['rmO' + i + '_'] = function (k) { G.other.splice(k, 1); show(); };
+  });
+  if ($('flx')) { $('flx').innerHTML = (F.__x || []).map(function (o, k) { return '<span>✓ ' + esc(o.f.name) + ' <span class="muted">(' + esc(D.others.filter(function (z) { return z.key === o.key; })[0].name) + ')</span><a onclick="F.__x.splice(' + k + ',1);show()">✕</a></span>'; }).join(''); }
+}
+
+function send() {
+  var jobs = [], decl = [], err = '';
+  D.items.forEach(function (x, i) {
+    var G = F[x.key] || { slot: [], other: [] };
+    if (x.slot && G.slot.length) {
+      var lv = x.slot.levels ? $('lv' + i).value : 'Highest', qn = $('qn' + i) ? $('qn' + i).value.trim() : '';
+      if (x.slot.levels && !lv) err = err || 'Choose whether your file is NEBOSH IGC or NEBOSH Diploma.';
+      jobs.push({ key: x.key, slot: lv, title: x.slot.levels ? lv : (qn || 'Highest qualification'), file: G.slot[0] });
+    }
+    G.other.forEach(function (f) { jobs.push({ key: x.key, slot: '', title: '', file: f }); });
+    var dc = $('dc' + i);
+    if (dc && dc.checked) {
+      var r = $('dr' + i).value.trim();
+      if (r.length < 3) err = err || 'Please tell us why for "' + x.name + '".';
+      else if (r !== x.declared) decl.push({ key: x.key, reason: r });
+    }
+  });
+  (F.__x || []).forEach(function (o) { jobs.push({ key: o.key, slot: '', title: '', file: o.f }); });
+  var big = jobs.filter(function (j) { return j.file.size > D.maxMb * 1048576; })[0];
+  if (big) err = err || big.file.name + ' is larger than ' + D.maxMb + ' MB.';
+  if (!jobs.length && !decl.length && !$('nt').value.trim()) err = err || 'Add at least one file, or tick what you do not have and tell us why.';
+  if (err) { note('out', 'err', esc(err)); return; }
+  var b = $('go'); b.disabled = true; var done = 0, dup = 0, failed = [];
+  jobs.reduce(function (p, j) {
+    return p.then(function () { note('out', 'info', 'Uploading ' + (++done) + ' of ' + jobs.length + '… ' + esc(j.file.name)); return fileData(j.file); })
+      .then(function (f) { return run('submitCandUpload', REF, TOKEN, { file: { key: j.key, slot: j.slot, title: j.title, name: f.name, mime: f.mime, data: f.data } }); })
+      .then(function (r) { if (r.duplicate) dup++; }).catch(function (e) { failed.push(j.file.name + ': ' + e.message); });
+  }, Promise.resolve()).then(function () { return decl.length ? run('submitCandUpload', REF, TOKEN, { decl: decl }) : null; })
+    .then(function () { return run('submitCandUpload', REF, TOKEN, { done: true, note: $('nt').value.trim() }); })
+    .then(function () { return run('getCandUploadPage', REF, TOKEN); })
+    .then(function (d2) {
+      var left = d2.items.filter(function (x) { return x.missing; }).map(function (x) { return x.name; });
+      $('app').innerHTML = '<div class="card"><h1>Thank you</h1><div class="msg ok">' + (jobs.length - dup - failed.length) + ' file(s) received' + (dup ? ', ' + dup + ' we already had' : '') + (decl.length ? ', ' + decl.length + ' item(s) explained' : '') + '.</div>' +
+        (failed.length ? '<div class="msg err">Not received: ' + esc(failed.join('; ')) + '</div>' : '') +
+        (left.length ? '<div class="msg info">Still needed: ' + esc(left.join(', ')) + '. You can open this link again to add them.</div>' : '<p>Everything required is now with us. We will be in touch.</p>') + '</div>';
+    }).catch(function (e) { b.disabled = false; note('out', 'err', esc(e.message || e)); });
+}
+RS.ready(load, { open: true });
+</script>
+</body>
+</html>

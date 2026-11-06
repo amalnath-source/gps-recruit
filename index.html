@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS HSE — Recruitment pages</title>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<link rel="stylesheet" href="theme.css">
+<style>
+  body { margin: 0; }
+  .hd { padding: 16px 20px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 22px 16px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  a.card { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--ink); background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--navy);
+    border-radius: 14px; padding: 16px; transition: box-shadow .15s, transform .1s; min-height: 120px; }
+  a.card:hover { box-shadow: 0 8px 22px rgba(85,70,184,.14); transform: translateY(-1px); }
+  a.card.alt { border-top-color: var(--orange); }
+  a.card b { font-family: 'Space Grotesk', Inter, sans-serif; font-size: 18px; }
+  a.card span { color: var(--muted); font-size: 13.5px; }
+  a.card i { font-style: normal; margin-top: auto; font-weight: 700; color: var(--navy); font-size: 13.5px; }
+  .note { background: var(--blush); border: 1px solid var(--blushline); border-radius: 12px; padding: 12px 14px; color: #7A3A1C; margin-top: 18px; font-size: 13.5px; }
+  .who { margin-left: auto; font-size: 12px; font-weight: 400; color: #EDE7FF; }
+  .who a { color: #C9BEF6; }
+</style>
+</head>
+<body>
+<div class="hd">GPS <span>HSE</span> Department<span class="who" id="rsWho"></span></div>
+<main id="app"><p class="sub">Loading…</p></main>
+<p class="site-foot"><a href="privacy.html">Privacy</a></p>
+<script>
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  RS.ready(function (me) {
+    var cards = [];
+    var card = function (href, title, text, go, alt) { cards.push('<a class="card' + (alt ? ' alt' : '') + '" href="' + href + '"><b>' + title + '</b><span>' + text + '</span><i>' + go + ' &rarr;</i></a>'); };
+    if (me.portal) {
+      card('portal.html', 'Staff Requirement Portal', 'Your project’s HSE vacancies, the candidates submitted to you, and every request with its status.', 'Open the portal');
+      card('portal.html?tab=raise', 'Request HSE staff', 'Raise a vacancy request. It goes to the Project Manager for approval, then to the GPS HSE Department.', 'New request', true);
+      if (me.pm || me.ho) card('portal.html?tab=approve', 'Approve vacancy requests', 'Requests from your project waiting for the Project / Contract Manager’s decision.', 'Review');
+    }
+    var SD = 'https://amalnath-source.github.io/gps-staff-update/';
+    card(SD + '?v=leave', 'Apply for leave', 'Leave application for your project HSE staff — goes to the CHSEM for approval.', 'Apply', true);
+    card(SD + '?v=update', 'Monthly staff update', 'Status, work pattern and moves of your project HSE staff.', 'Update');
+    card(SD + '?v=plan', 'Annual leave plan', 'Plan the year’s leave for your project HSE staff.', 'Open the plan');
+    if (me.ho && me.appUrl) card(me.appUrl, 'Recruitment system', 'The full GPS HSE recruitment system (GPS HO).', 'Open the app', true);
+    document.getElementById('app').innerHTML = '<h1>Hello' + (me.email ? ', ' + esc(me.email.split('@')[0].replace(/[._]/g, ' ')) : '') + '</h1>' +
+      '<p class="sub">What would you like to do?</p><div class="grid">' + cards.join('') + '</div>' +
+      (!me.portal ? '<div class="note">Your e-mail (' + esc(me.email) + ') is not listed as HSE Manager, Project Manager or Contract Manager of a project in the GPS Master Database. If it should be, please tell the GPS HSE Department.</div>' : '');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 760px; margin: 16px auto; background: #fff; border: 1px solid #EDE4EC; }
+  .hd { background: #5546B8; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; }
+  .hd span { color: #D9825B; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #C9704A, #D9825B); }
+  .bd { padding: 18px 20px; }
+  h2 { color: #5546B8; font-size: 18px; margin: 0 0 4px; }
+  h3 { color: #5546B8; font-size: 15px; margin: 22px 0 8px; border-bottom: 2px solid #D9825B; padding-bottom: 4px; }
+  .muted { color: #6B6080; font-size: 12px; }
+  label.l { display: block; font-size: 12px; color: #6B6080; margin: 12px 0 4px; }
+  input[type=text], input[type=number], input[type=date], select, textarea { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #EDE4EC; border-radius: 6px; font-family: inherit; font-size: 14px; background: #fff; }
+  textarea { min-height: 70px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips label { flex: 1; min-width: 100px; border: 2px solid #EDE4EC; border-radius: 6px; padding: 10px; text-align: center; font-weight: bold; cursor: pointer; font-size: 13px; }
+  .chips input { display: none; }
+  .chips label.on { border-color: #5546B8; background: #EAF2FB; color: #5546B8; }
+  .hint { background: #F8F4FB; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #4A3F63; margin-top: 6px; }
+  .lead { background: #FFF4E0; border-left: 4px solid #C9704A; border-radius: 6px; padding: 10px 12px; margin: 10px 0; font-size: 13px; color: #5C3A00; }
+  .short { background: #FDECEA; border-left: 4px solid #C0392B; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-size: 12px; color: #922B21; }
+  .missing { background: #FFF9F6; border: 1px solid #F5D9B5; color: #7A4B12; border-radius: 6px; padding: 10px 12px; margin: 10px 0; font-size: 13px; }
+  .btn { background: #5546B8; color: #fff; border: none; border-radius: 6px; padding: 12px 22px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .6; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; margin: 10px 0; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 14px; }
+  .req { color: #C0392B; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<title>Vacancy request — GPS HSE</title>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS <span>HSE</span> Department</div>
+  <div class="bar"></div>
+  <div class="bd" id="body"></div>
+</div>
+<script>
+  // "Replacing": type-ahead from the GPS employee list of the chosen project (Master Database)
+  var REPL_FOR = null;
+  function loadRepl() {
+    var pe = document.getElementById('project'), proj = pe ? pe.value : '';
+    if (!proj || REPL_FOR === proj) return;
+    REPL_FOR = proj;
+    google.script.run.withSuccessHandler(function (list) {
+      var dl = document.getElementById('replList'); if (!dl) return;
+      dl.innerHTML = (list || []).map(function (x) { return '<option value="' + String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">'; }).join('');
+    }).withFailureHandler(function () { REPL_FOR = null; }).getReplacingOptions(proj);
+  }
+
+  var RSQ = {}; new URLSearchParams(location.search).forEach(function (v, k) { RSQ[k] = v; });
+  var D = null;
+
+  function esc(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+  function radio(name) { var e = document.querySelector('input[name="' + name + '"]:checked'); return e ? e.value : ''; }
+  function chips(name, list, cur) {
+    return '<div class="chips">' + list.map(function (x) {
+      return '<label class="' + (x === cur ? 'on' : '') + '"><input type="radio" name="' + name + '" value="' + esc(x) + '"' + (x === cur ? ' checked' : '') +
+        ' onchange="pick(this)">' + esc(x) + '</label>';
+    }).join('') + '</div>';
+  }
+  function pick(inp) {
+    document.querySelectorAll('input[name="' + inp.name + '"]').forEach(function (x) { x.parentNode.classList.toggle('on', x.checked); });
+    if (inp.name === 'type') document.getElementById('replWrap').style.display = inp.value === 'Replacement' ? '' : 'none';
+    if (inp.name === 'fill' || inp.id === 'posts') needText();
+  }
+  function needText() {
+    var n = Number(val('posts')) || 0, f = radio('fill');
+    var t = !n ? '' : f === 'National' ? (n * 2) + ' national' + (n * 2 === 1 ? '' : 's') + ' (14/14 rotation: 2 nationals per post)' :
+      f === 'Expat' ? Math.ceil(n) + ' expat' + (Math.ceil(n) === 1 ? '' : 's') + ' (1 per post)' :
+      f === 'Either' ? Math.ceil(n) + ' expat' + (Math.ceil(n) === 1 ? '' : 's') + ' or ' + (n * 2) + ' nationals' : '';
+    document.getElementById('need').textContent = t ? 'This means: ' + t : '';
+  }
+
+  // Lead time note + short-notice warning on the Required by date
+  function leadBox() {
+    setTimeout(shortCheck, 0);
+    return '<div class="lead"><b>Lead time: allow at least ' + D.lead.min + '–' + D.lead.max + ' days.</b> ' + esc(D.lead.text) + '</div>';
+  }
+  function shortCheck() {
+    var el = document.getElementById('shortMsg'), v = val('requiredBy');
+    if (!el) return;
+    if (!v) { el.innerHTML = ''; return; }
+    var p = v.split('-'), d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])), t = new Date();
+    t.setHours(0, 0, 0, 0);
+    var n = Math.round((d - t) / 864e5);
+    el.innerHTML = n < D.lead.min ? '<div class="short">This date is only ' + Math.max(n, 0) + ' day' + (n === 1 ? '' : 's') + ' away — it is unlikely to be filled in time. You can still submit.</div>' : '';
+  }
+
+  function render() {
+    var b = document.getElementById('body');
+    if (D.done) {
+      b.innerHTML = '<h2>Vacancy request ' + esc(D.id) + '</h2><div class="ok">This request has already been handled: <b>' + esc(D.done) + '</b>. Thank you.</div>';
+      return;
+    }
+    var posOther = D.position && D.positions.indexOf(D.position) < 0;
+    b.innerHTML = '<h2>' + (D.isNew ? 'Request a vacancy' : 'Vacancy request ' + esc(D.id)) + '</h2>' +
+      '<div class="muted">Signed in as ' + esc(D.user) + '. The GPS HSE Department reviews the request and starts looking for candidates.</div>' +
+      leadBox() +
+      (D.subject ? '<div class="hint">From the email "' + esc(D.subject) + '"' + (D.submitted ? ' · last completed ' + esc(D.submitted) : '') + '</div>' : '') +
+      (D.missing ? '<div class="missing"><b>Please complete:</b> ' + esc(D.missing) + '</div>' : '') +
+      '<h3>Position</h3>' +
+      '<label class="l">Project <span class="req">*</span></label><select id="project"><option value="">— choose —</option>' +
+        D.projects.map(function (p) { return '<option' + (p === D.project ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' +
+      '<div class="grid"><div><label class="l">Position <span class="req">*</span></label><select id="position" onchange="document.getElementById(\'posOtherWrap\').style.display=this.value===\'__other\'?\'\':\'none\'">' +
+        '<option value="">— choose —</option>' + D.positions.map(function (p) { return '<option' + (p === D.position ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') +
+        '<option value="__other"' + (posOther ? ' selected' : '') + '>Other (type it)</option></select>' +
+        '<div id="posOtherWrap" style="display:' + (posOther ? '' : 'none') + '"><input type="text" id="posOther" placeholder="Position" value="' + esc(posOther ? D.position : '') + '" style="margin-top:6px"></div></div>' +
+      '<div><label class="l">Number of posts <span class="req">*</span></label><input type="number" id="posts" min="0.5" step="0.5" value="' + esc(D.posts) + '" oninput="needText()"></div></div>' +
+      '<label class="l">Fill with</label>' + chips('fill', D.fillOptions, D.fillWith) +
+      '<div class="muted" id="need" style="margin-top:6px"></div>' +
+      '<label class="l">New post or replacement</label>' + chips('type', D.types, D.type) +
+      '<div id="replWrap" style="display:' + (D.type === 'Replacement' ? '' : 'none') + '"><label class="l">Replacing (name)</label><input type="text" id="replacing" list="replList" onfocus="loadRepl()" placeholder="Type a name or GPS ID" value="' + esc(D.replacing) + '"><datalist id="replList"></datalist></div>' +
+      '<h3>Details</h3>' +
+      '<div class="grid"><div><label class="l">Required by</label><input type="date" id="requiredBy" value="' + esc(D.requiredBy) + '" onchange="shortCheck()" oninput="shortCheck()"><div id="shortMsg"></div></div>' +
+      '<div><label class="l">Requested by</label><input type="text" id="requestedBy" value="' + esc(D.requestedBy || D.user) + '"></div></div>' +
+      '<label class="l">Client / job requirements</label><textarea id="requirements" placeholder="e.g. PDO approved HSE Supervisor, NEBOSH IGC, 8+ years in oil & gas, H2S, valid driving licence">' + esc(D.requirements) + '</textarea>' +
+      '<label class="l">Remarks</label><textarea id="remarks" placeholder="Anything else (location, rotation, start date…)"></textarea>' +
+      '<div id="msg"></div><div style="margin-top:16px"><button class="btn" id="sendBtn" onclick="send()">Submit request</button></div>';
+    needText();
+  }
+
+  function send() {
+    var pos = val('position') === '__other' ? val('posOther').trim() : val('position');
+    var p = { project: val('project'), position: pos, posts: val('posts'), fillWith: radio('fill'), type: radio('type') || 'New post',
+      replacing: val('replacing'), requiredBy: val('requiredBy'), requestedBy: val('requestedBy'), requirements: val('requirements'), remarks: val('remarks') };
+    var m = document.getElementById('msg');
+    if (!p.project || !p.position || !(Number(p.posts) > 0)) { m.innerHTML = '<div class="warn">Please give the project, the position and the number of posts.</div>'; return; }
+    document.getElementById('sendBtn').disabled = true;
+    m.innerHTML = '<div class="muted" style="margin-top:8px">Sending&hellip;</div>';
+    google.script.run.withSuccessHandler(function (r) {
+      document.getElementById('body').innerHTML = '<h2>Thank you</h2><div class="ok">Your request <b>' + esc(r.id) + '</b> (' + esc(p.position) + ', ' + esc(p.project) +
+        ') has been sent to the GPS HSE Department. Suitable candidates will be shared with you when their CVs are submitted to the project.</div>' +
+        (D.isNew ? '<p><a href="#" onclick="location.reload();return false">Request another position</a></p>' : '');
+    }).withFailureHandler(function (e) {
+      document.getElementById('sendBtn').disabled = false;
+      m.innerHTML = '<div class="warn">' + esc(e.message) + '</div>';
+    }).submitVacancyRequest(D.ref, p);
+  }
+
+  RS.ready(function () {
+    google.script.run.withSuccessHandler(function (d) {
+      if (d && d.goPortal) { location.href = 'portal.html?tab=raise'; return; }
+      D = d; render();
+    }).withFailureHandler(function (e) { document.getElementById('body').innerHTML = '<div class="warn">' + esc(e.message) + '</div>'; }).recVrqBoot(RSQ.ref || '');
+  });
+</script>
+<p class="site-foot"><a href="./">All GPS HSE pages</a> · <a href="#" onclick="RS.out();return false">Sign out</a> · <a href="privacy.html">Privacy</a></p>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="config.js"></script>
+<script src="rs.js"></script>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
+  .wrap { max-width: 980px; margin: 16px auto; background: #fff; border: 1px solid #EDE4EC; }
+  .hd { background: #5546B8; color: #fff; padding: 16px 20px; font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .hd span { color: #D9825B; }
+  .hd .who { margin-left: auto; font-size: 12px; font-weight: normal; color: #D6DEEA; }
+  .bar { height: 4px; background: linear-gradient(90deg, #C0392B, #C9704A, #D9825B); }
+  .bd { padding: 16px 20px 24px; }
+  h2 { color: #5546B8; font-size: 18px; margin: 0 0 4px; }
+  h3 { color: #5546B8; font-size: 15px; margin: 18px 0 8px; border-bottom: 2px solid #D9825B; padding-bottom: 4px; }
+  .muted { color: #6B6080; font-size: 12px; }
+  .projs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .proj { border: 1px solid #EDE4EC; border-radius: 14px; padding: 4px 10px; font-size: 12px; background: #F8F4FB; }
+  .proj b { color: #5546B8; }
+  .tabs { display: flex; gap: 8px; margin: 14px 0 14px; flex-wrap: wrap; align-items: center; }
+  .tab { border: 1px solid #D9D0EE; background: linear-gradient(#FFFFFF, #EEF2F8); padding: 9px 14px; font-size: 14px; cursor: pointer; color: #5546B8; border-radius: 8px; font-family: inherit;
+    box-shadow: 0 2px 0 #D9D0EE, 0 3px 6px rgba(31,56,100,.08); transition: transform .06s, box-shadow .06s, background .15s; }
+  .tab:hover { background: linear-gradient(#FFFFFF, #E3EAF4); }
+  .tab:active { transform: translateY(2px); box-shadow: 0 0 0 #D9D0EE, 0 1px 2px rgba(31,56,100,.12); }
+  .tab.on { background: #5546B8; color: #fff; font-weight: bold; border-color: #5546B8; box-shadow: 0 2px 0 #0F2140, 0 3px 8px rgba(31,56,100,.25); }
+  .tab.raise { margin-left: auto; background: linear-gradient(#F39C3D, #C9704A); color: #fff; font-weight: bold; border-color: #D2600F;
+    box-shadow: 0 2px 0 #A2502B, 0 4px 10px rgba(232,113,26,.35); animation: raisePulse 1.8s ease-in-out infinite; }
+  .tab.raise:hover { background: linear-gradient(#E0A080, #EC7B26); }
+  .tab.raise.on { animation: none; background: #C85D10; box-shadow: 0 2px 0 #8F420B; }
+  @keyframes raisePulse { 0%, 100% { box-shadow: 0 2px 0 #A2502B, 0 0 0 0 rgba(232,113,26,.55); } 50% { box-shadow: 0 2px 0 #A2502B, 0 0 0 8px rgba(232,113,26,0); } }
+  @media (prefers-reduced-motion: reduce) { .tab.raise { animation: none; } }
+  .card.vac { border: 1px solid transparent; }
+  .card.vac.c0 { background: #F3F7FD; border-color: #D5E2F3; border-left: 5px solid #2E5C9A; }
+  .card.vac.c1 { background: #F2FAF6; border-color: #CDE9DA; border-left: 5px solid #1E8449; }
+  .card.vac.c2 { background: #FFF9F6; border-color: #EFC3AC; border-left: 5px solid #C9704A; }
+  .card.vac.c3 { background: #F7F4FC; border-color: #E0D6F0; border-left: 5px solid #6C4AB6; }
+  .card.vac.c4 { background: #F1F9FA; border-color: #CBE7EB; border-left: 5px solid #117A8B; }
+  .card.vac.closed { background: #F7F8FA; border-color: #EDE4EC; border-left: 5px solid #A0A8B6; }
+  .card.vac table th { background: rgba(255,255,255,.7); }
+  @media (max-width: 640px) { .tab.raise { margin-left: 0; width: 100%; } }
+  .cnt { display: inline-block; min-width: 18px; padding: 1px 6px; border-radius: 10px; background: #C0392B; color: #fff; font-size: 11px; margin-left: 4px; }
+  .cnt.n { background: #8A94A6; }
+  .card { border: 1px solid #EDE4EC; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .card.focus { border-color: #C9704A; box-shadow: 0 0 0 2px #FBEDE5; }
+  .card.act { border-left: 4px solid #C9704A; }
+  .ct { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .ct b { color: #5546B8; font-size: 15px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: bold; background: #F1ECFA; color: #4A3F63; }
+  .pill.wait { background: #FFF4E0; color: #9A5B00; }
+  .pill.ok { background: #E6F4EC; color: #1E6B41; }
+  .pill.bad { background: #FDECEA; color: #C0392B; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 3px 10px; font-size: 13px; margin-top: 8px; }
+  .kv div:nth-child(odd) { color: #6B6080; }
+  .steps { display: flex; gap: 0; margin: 10px 0 2px; flex-wrap: wrap; }
+  .st { flex: 1; min-width: 120px; font-size: 11px; color: #6B6080; padding: 6px 8px; border-top: 3px solid #EDE4EC; }
+  .st.done { border-top-color: #1E8449; color: #1E6B41; }
+  .st.now { border-top-color: #C9704A; color: #9A5B00; font-weight: bold; }
+  .st.bad { border-top-color: #C0392B; color: #C0392B; font-weight: bold; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+  th { text-align: left; background: #F8F4FB; color: #4A3F63; font-weight: normal; padding: 6px 8px; border-bottom: 1px solid #EDE4EC; }
+  td { padding: 6px 8px; border-bottom: 1px solid #F1ECFA; vertical-align: top; }
+  .tw { overflow-x: auto; }
+  label.l { display: block; font-size: 12px; color: #6B6080; margin: 12px 0 4px; }
+  input[type=text], input[type=number], input[type=date], select, textarea { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #EDE4EC; border-radius: 6px; font-family: inherit; font-size: 14px; background: #fff; }
+  textarea { min-height: 64px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips label { flex: 1; min-width: 90px; border: 2px solid #EDE4EC; border-radius: 6px; padding: 9px; text-align: center; font-weight: bold; cursor: pointer; font-size: 13px; }
+  .chips input { display: none; }
+  .chips label.on { border-color: #5546B8; background: #EAF2FB; color: #5546B8; }
+  .btn { background: #5546B8; color: #fff; border: none; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn.green { background: #1E8449; } .btn.red { background: #fff; color: #C0392B; border: 1px solid #C0392B; }
+  .btn.light { background: #fff; color: #5546B8; border: 1px solid #5546B8; }
+  .btn:disabled { opacity: .6; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .warn { background: #FDECEA; border: 1px solid #F5B7B1; color: #922B21; border-radius: 6px; padding: 10px; margin: 10px 0; }
+  .ok { background: #E9F7EF; border: 1px solid #A9DFBF; border-radius: 6px; padding: 12px; margin: 10px 0; }
+  .note { background: #F8F4FB; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #4A3F63; margin-top: 6px; }
+  .req { color: #C0392B; }
+  .lead { background: #FFF4E0; border-left: 4px solid #C9704A; border-radius: 6px; padding: 10px 12px; margin: 10px 0; font-size: 13px; color: #5C3A00; }
+  .short { background: #FDECEA; border-left: 4px solid #C0392B; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-size: 12px; color: #922B21; }
+  .filter { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .filter select { width: auto; min-width: 180px; padding: 6px 8px; }
+  .empty { color: #6B6080; padding: 14px; text-align: center; border: 1px dashed #EDE4EC; border-radius: 8px; }
+  @media (max-width: 640px) {
+    table.ctab, table.ctab tbody, table.ctab tr, table.ctab td { display: block; width: auto; }
+    table.ctab tr.hrow { display: none; }
+    table.ctab tr { border: 1px solid #F1ECFA; border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+    table.ctab td { border: none; padding: 2px 0; display: flex; gap: 8px; }
+    table.ctab td::before { content: attr(data-l); color: #6B6080; min-width: 92px; font-size: 12px; }
+    table.ctab td:first-child::before { display: none; }
+  }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .kv { grid-template-columns: 110px 1fr; } .bd { padding: 14px 12px 20px; } .wrap { margin: 0; border: none; } }
+</style>
+<link rel="stylesheet" href="theme.css">
+<title>Staff Requirement Portal — GPS HSE</title>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">GPS <span>HSE</span> Department — Staff Requirement Portal<span class="who" id="who"></span></div>
+  <div class="bar"></div>
+  <div class="bd" id="body"><div class="muted">Loading&hellip;</div></div>
+</div>
+<script>
+  // "Replacing": type-ahead from the GPS employee list of the chosen project (Master Database)
+  var REPL_FOR = null;
+  function loadRepl() {
+    var pe = document.getElementById('project'), proj = pe ? pe.value : '';
+    if (!proj || REPL_FOR === proj) return;
+    REPL_FOR = proj;
+    google.script.run.withSuccessHandler(function (list) {
+      var dl = document.getElementById('replList'); if (!dl) return;
+      dl.innerHTML = (list || []).map(function (x) { return '<option value="' + String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">'; }).join('');
+    }).withFailureHandler(function () { REPL_FOR = null; }).getReplacingOptions(proj);
+  }
+
+  var RSQ = {}; new URLSearchParams(location.search).forEach(function (v, k) { RSQ[k] = v; });
+  var BOOT = { focus: RSQ.vrq || '', user: '', as: RSQ.as || '' };
+  var D = null, TAB = RSQ.tab || '', PF = '', FOCUS = BOOT.focus || '';
+
+  function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+  function radio(name) { var e = document.querySelector('input[name="' + name + '"]:checked'); return e ? e.value : ''; }
+
+  function load() {
+    google.script.run.withSuccessHandler(function (d) {
+      D = d;
+      document.getElementById('who').textContent = d.user + (d.ho ? ' · GPS HO' : d.mgmt ? ' · Management view' : '');
+      if (!TAB) {
+        var focusReq = FOCUS && d.requests.filter(function (r) { return r.id === FOCUS; })[0];
+        TAB = d.requests.some(function (r) { return r.canDecide; }) ? 'approve' : focusReq ? 'requests' : 'vacancies';
+      }
+      render();
+    }).withFailureHandler(function (e) { document.getElementById('body').innerHTML = '<div class="warn">' + esc(e.message) + '</div>'; }).getPortalData(BOOT.as || '');
+  }
+
+  function render() {
+    var mine = D.requests.filter(function (r) { return r.canDecide; });
+    var openV = D.vacancies.filter(function (v) { return v.status === 'Open'; }).length;
+    var openR = D.requests.filter(function (r) { return ['Waiting for Project Manager', 'Ready for review', 'Waiting for HSE Manager'].indexOf(r.status) > -1; }).length;
+    var h = (D.viewAs ? '<div class="note" style="margin:0 0 10px;border-left:4px solid #C9704A"><b>GPS HO preview:</b> this is exactly what <b>' + esc(D.viewAs) + '</b> sees. Read-only — nothing can be changed here.</div>' : '') +
+      '<h2>' + (D.ho || D.mgmt ? 'All projects' : 'Your project' + (D.projects.length > 1 ? 's' : '')) + '</h2>' +
+      (D.mgmt && !D.ho ? '<div class="muted">Management view — read-only. You see every project\'s requests, vacancies and the candidates submitted to them.</div>' :
+        D.ho ? '<div class="muted">GPS HO view — you see every project. Accept or reject requests in the app: <a href="' + esc(D.appUrl) + '">Vacancies › Requests</a>.</div>' :
+        '<div class="projs">' + D.projects.map(function (p) { return '<span class="proj"><b>' + esc(p.name) + '</b> · ' + esc(p.roles.join(', ')) + '</span>'; }).join('') + '</div>') +
+      '<div class="tabs">' +
+      (mine.length || D.projects.some(function (p) { return p.roles.indexOf('Project / Contract Manager') > -1; }) ?
+        tab('approve', 'Waiting for my approval', mine.length, true) : '') +
+      tab('vacancies', 'Vacancies', openV) + tab('requests', 'Requests', openR) + (D.viewAs || !D.canRaise.length ? '' : tab('raise', '+ Raise a request', -1, false, 'raise')) + '</div>';
+    if (D.projects.length > 1 && TAB !== 'raise') {
+      h += '<div class="filter"><span class="muted">Project</span><select onchange="PF=this.value;render()"><option value="">All projects</option>' +
+        D.projects.map(function (p) { return '<option' + (p.name === PF ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select></div>';
+    }
+    var pf = function (x) { return !PF || x.project === PF; };
+    if (TAB === 'approve') h += mine.filter(pf).map(reqCard).join('') || '<div class="empty">Nothing is waiting for your approval.</div>';
+    if (TAB === 'vacancies') h += D.vacancies.filter(pf).map(vacCard).join('') || '<div class="empty">No vacancies for your project' + (D.projects.length > 1 ? 's' : '') + ' yet. Use <b>+ Raise a request</b>.</div>';
+    if (TAB === 'requests') h += D.requests.filter(pf).map(reqCard).join('') || '<div class="empty">No requests yet.</div>';
+    if (TAB === 'raise') h += raiseForm();
+    document.getElementById('body').innerHTML = h;
+    if (TAB === 'raise') { needText(); flowText(); }
+    if (FOCUS) { var el = document.getElementById('rq_' + FOCUS); if (el) { el.scrollIntoView({ block: 'center' }); } }
+  }
+  function tab(k, label, n, red, cls) {
+    return '<button class="tab' + (cls ? ' ' + cls : '') + (TAB === k ? ' on' : '') + '" onclick="TAB=\'' + k + '\';render()">' + label +
+      (n > 0 ? '<span class="cnt' + (red ? '' : ' n') + '">' + n + '</span>' : '') + '</button>';
+  }
+
+
+  /* ---------- requests ---------- */
+  function reqPill(r) {
+    var c = r.status === 'Created' || r.status === 'Added to existing vacancy' ? 'ok' : /Rejected/.test(r.status) ? 'bad' : 'wait';
+    return '<span class="pill ' + c + '">' + esc(r.statusText) + '</span>';
+  }
+  function reqSteps(r) {
+    var raised = 'Raised ' + r.raisedOn;
+    var pmSkip = !r.pmStatus || /raised by|No Project Manager/.test(r.pmStatus);
+    var pm = r.status === 'Waiting for Project Manager' ? 'now' : r.status === 'Rejected by Project Manager' ? 'bad' : 'done';
+    var ho = r.status === 'Ready for review' || r.status === 'Waiting for HSE Manager' ? 'now' : r.status === 'Rejected' ? 'bad' :
+      r.status === 'Created' || r.status === 'Added to existing vacancy' ? 'done' : '';
+    return '<div class="steps"><div class="st done">1 · ' + esc(raised) + '</div>' +
+      '<div class="st ' + (pmSkip && pm === 'done' ? 'done' : pm) + '">2 · Project Manager' + (pmSkip ? ' (not needed)' : r.pmOn ? ' · ' + esc(r.pmStatus) + ' ' + esc(r.pmOn) : ' approval') + '</div>' +
+      '<div class="st ' + ho + '">3 · GPS HO acceptance' + (r.hoOn ? ' · ' + esc(r.hoOn) : '') + '</div>' +
+      '<div class="st ' + (r.vacancyId ? 'done' : '') + '">4 · Vacancy' + (r.vacancyId ? ' ' + esc(r.vacancyId) + ' open' : '') + '</div></div>';
+  }
+  function reqCard(r) {
+    var h = '<div class="card' + (r.canDecide ? ' act' : '') + (FOCUS === r.id ? ' focus' : '') + '" id="rq_' + esc(r.id) + '"><div class="ct"><b>' + esc(r.position) + '</b>' +
+      '<span>' + esc(r.project) + '</span><span class="muted">' + esc(r.id) + '</span>' + reqPill(r) + '</div>' + reqSteps(r) +
+      '<div class="kv"><div>Posts</div><div>' + esc(r.posts) + (r.fillWith ? ' · fill with ' + esc(r.fillWith) : '') + '</div>' +
+      '<div>Type</div><div>' + esc(r.type || 'New post') + (r.replacing ? ' — replacing ' + esc(r.replacing) : '') + '</div>' +
+      (r.requiredBy ? '<div>Required by</div><div>' + esc(r.requiredBy) + '</div>' : '') +
+      (r.requirements ? '<div>Requirements</div><div>' + esc(r.requirements) + '</div>' : '') +
+      (r.remarks ? '<div>Remarks</div><div>' + esc(r.remarks) + '</div>' : '') +
+      '<div>Raised by</div><div>' + esc(r.raisedBy) + (r.raisedRole ? ' (' + esc(r.raisedRole) + ')' : '') + ' · ' + esc(r.raisedOn) + '</div>' +
+      (r.pmBy ? '<div>Project Manager</div><div>' + esc(r.pmStatus) + ' by ' + esc(r.pmBy) + ' · ' + esc(r.pmOn) + (r.pmRemarks ? ' — ' + esc(r.pmRemarks) : '') + '</div>' : '') +
+      (r.hoBy ? '<div>GPS HO</div><div>' + esc(r.hoBy) + ' · ' + esc(r.hoOn) + '</div>' : '') + '</div>';
+    if (r.canDecide) {
+      h += leadBox() + (r.shortDays > -1 ? '<div class="short">Required by is only ' + r.shortDays + ' day' + (r.shortDays === 1 ? '' : 's') + ' after the request — it is unlikely to be filled in time.</div>' : '') +
+        '<label class="l">Your remarks (needed if you reject)</label><textarea id="pmr_' + esc(r.id) + '" placeholder="e.g. Approved — budget confirmed for 2 posts"></textarea>' +
+        '<div class="row"><button class="btn green" onclick="decide(\'' + esc(r.id) + '\',true,this)">Approve</button>' +
+        '<button class="btn red" onclick="decide(\'' + esc(r.id) + '\',false,this)">Reject</button><span id="pmm_' + esc(r.id) + '"></span></div>';
+    }
+    if (r.vacancyId) h += '<div class="row"><button class="btn light" onclick="TAB=\'vacancies\';FOCUS=\'' + esc(r.vacancyId) + '\';render()">Open vacancy ' + esc(r.vacancyId) + '</button></div>';
+    return h + '</div>';
+  }
+  function decide(id, approve, btn) {
+    var rem = val('pmr_' + id).trim(), m = document.getElementById('pmm_' + id);
+    if (!approve && !rem) { m.innerHTML = '<span class="req">Please give the reason for rejecting.</span>'; return; }
+    btn.parentNode.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    m.innerHTML = '<span class="muted">Saving&hellip;</span>';
+    google.script.run.withSuccessHandler(function () {
+      FOCUS = id; TAB = 'requests'; load();
+    }).withFailureHandler(function (e) {
+      btn.parentNode.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+      m.innerHTML = '<span class="req">' + esc(e.message) + '</span>';
+    }).portalPmDecide(id, approve, rem);
+  }
+
+  /* ---------- vacancies ---------- */
+  function vacCard(v, i) {
+    var pill = v.status === 'Open' ? 'wait' : v.status === 'Filled' ? 'ok' : 'bad';
+    var h = '<div class="card vac ' + (v.status === 'Open' ? 'c' + ((i || 0) % 5) : 'closed') + (FOCUS === v.id ? ' focus' : '') + '" id="rq_' + esc(v.id) + '"><div class="ct"><b>' + esc(v.position) + '</b><span>' + esc(v.project) + '</span>' +
+      '<span class="muted">' + esc(v.id) + '</span><span class="pill ' + pill + '">' + esc(v.status) + '</span></div>' +
+      '<div class="kv"><div>Required</div><div>' + esc(v.need) + '</div>' +
+      '<div>Progress</div><div><b>' + v.submitted + '</b> CV(s) submitted to the project · <b>' + v.approved + '</b> approved by the client' +
+        (v.status === 'Open' && v.preparing ? ' · ' + v.preparing + ' more being prepared by GPS HO' : '') + '</div>' +
+      '<div>Type</div><div>' + esc(v.type || 'New post') + (v.replacing ? ' — replacing ' + esc(v.replacing) : '') + '</div>' +
+      (v.requiredBy ? '<div>Required by</div><div>' + esc(v.requiredBy) + '</div>' : '') +
+      (v.requirements ? '<div>Requirements</div><div>' + esc(v.requirements) + '</div>' : '') +
+      '<div>Opened</div><div>' + esc(v.opened) + ' (' + esc(v.days) + ' days)' + (v.requestId ? ' · from request ' + esc(v.requestId) : '') + '</div></div>';
+    if (v.linked.length) {
+      h += '<div class="tw"><table class="ctab"><tr class="hrow"><th>Candidate</th><th>Nationality</th><th>Experience</th><th>CV submitted</th><th>Stage</th></tr>' +
+        v.linked.map(function (c) {
+          return '<tr><td><div><b>' + esc(c.name) + '</b> <span class="muted">' + esc(c.id) + '</span></div></td><td data-l="Nationality"><div>' + esc(c.nat) + (c.natCat ? ' <span class="muted">' + esc(c.natCat) + '</span>' : '') + '</div></td>' +
+            '<td data-l="Experience"><div>' + esc(c.exp || '—') + (c.approvals ? '<div class="muted">' + esc(c.approvals) + '</div>' : '') + '</div></td><td data-l="CV submitted">' + esc(c.submitted) + '</td>' +
+            '<td data-l="Stage"><span class="pill ' + (c.approved ? 'ok' : /Not approved|declined|Withdrawn/.test(c.stage) ? 'bad' : 'wait') + '">' + esc(c.stage) + '</span></td></tr>';
+        }).join('') + '</table></div>';
+    } else if (v.status === 'Open') {
+      h += '<div class="note">No CV submitted to the project yet' + (v.preparing ? ' — ' + v.preparing + ' candidate(s) are being screened by GPS HO.' : ' — GPS HO is searching for candidates.') + '</div>';
+    }
+    return h + '</div>';
+  }
+
+  /* ---------- raise ---------- */
+  function chips(name, list, cur) {
+    return '<div class="chips">' + list.map(function (x) {
+      return '<label class="' + (x === cur ? 'on' : '') + '"><input type="radio" name="' + name + '" value="' + esc(x) + '"' + (x === cur ? ' checked' : '') + ' onchange="pick(this)">' + esc(x) + '</label>';
+    }).join('') + '</div>';
+  }
+  function pick(inp) {
+    document.querySelectorAll('input[name="' + inp.name + '"]').forEach(function (x) { x.parentNode.classList.toggle('on', x.checked); });
+    if (inp.name === 'type') document.getElementById('replWrap').style.display = inp.value === 'Replacement' ? '' : 'none';
+    needText(); flowText();
+  }
+  function needText() {
+    var n = Number(val('posts')) || 0, f = radio('fill'), el = document.getElementById('need');
+    if (!el) return;
+    var t = !n ? '' : f === 'National' ? (n * 2) + ' national' + (n * 2 === 1 ? '' : 's') + ' (14/14 rotation: 2 nationals per post)' :
+      f === 'Expat' ? Math.ceil(n) + ' expat' + (Math.ceil(n) === 1 ? '' : 's') + ' (1 per post)' :
+      f === 'Either' ? Math.ceil(n) + ' expat' + (Math.ceil(n) === 1 ? '' : 's') + ' or ' + (n * 2) + ' nationals' : '';
+    el.textContent = t ? 'This means: ' + t : '';
+  }
+  function flowText() {
+    var p = val('project'), el = document.getElementById('flow');
+    if (!el) return;
+    var pr = D.projects.filter(function (x) { return x.name === p; })[0];
+    if (!pr) { el.textContent = ''; return; }
+    var pm = pr.roles.indexOf('Project / Contract Manager') > -1 || pr.roles.indexOf('GPS HO') > -1;
+    el.innerHTML = pm ? 'Goes straight to <b>GPS HO</b> for acceptance (you are the Project / Contract Manager).' :
+      'Goes to the <b>Project / Contract Manager</b> for approval, then to <b>GPS HO</b> for acceptance. You are emailed at each step.';
+  }
+  // Lead time note + short-notice warning on the Required by date
+  function leadBox() {
+    setTimeout(shortCheck, 0);
+    return '<div class="lead"><b>Lead time: allow at least ' + D.lead.min + '–' + D.lead.max + ' days.</b> ' + esc(D.lead.text) + '</div>';
+  }
+  function shortCheck() {
+    var el = document.getElementById('shortMsg'), v = val('requiredBy');
+    if (!el) return;
+    if (!v) { el.innerHTML = ''; return; }
+    var p = v.split('-'), d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])), t = new Date();
+    t.setHours(0, 0, 0, 0);
+    var n = Math.round((d - t) / 864e5);
+    el.innerHTML = n < D.lead.min ? '<div class="short">This date is only ' + Math.max(n, 0) + ' day' + (n === 1 ? '' : 's') + ' away — it is unlikely to be filled in time. You can still submit.</div>' : '';
+  }
+  function raiseForm() {
+    var only = D.canRaise.length === 1 ? D.canRaise[0] : '';
+    return leadBox() + '<div class="muted">Raise a requirement for HSE staff. Fields marked <span class="req">*</span> are needed.</div>' +
+      '<label class="l">Project <span class="req">*</span></label><select id="project" onchange="flowText()">' + (only ? '' : '<option value="">— choose —</option>') +
+        D.canRaise.map(function (p) { return '<option' + (p === (PF || only) ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' +
+      '<div class="note" id="flow"></div>' +
+      '<div class="grid"><div><label class="l">Position <span class="req">*</span></label><select id="position" onchange="document.getElementById(\'posOtherWrap\').style.display=this.value===\'__other\'?\'\':\'none\'">' +
+        '<option value="">— choose —</option>' + D.positions.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '<option value="__other">Other (type it)</option></select>' +
+        '<div id="posOtherWrap" style="display:none"><input type="text" id="posOther" placeholder="Position" style="margin-top:6px"></div></div>' +
+      '<div><label class="l">Number of posts <span class="req">*</span></label><input type="number" id="posts" min="0.5" step="0.5" value="1" oninput="needText()"></div></div>' +
+      '<label class="l">Fill with</label>' + chips('fill', D.fillOptions, '') + '<div class="muted" id="need" style="margin-top:6px"></div>' +
+      '<label class="l">New post or replacement</label>' + chips('type', D.types, 'New post') +
+      '<div id="replWrap" style="display:none"><label class="l">Replacing (name)</label><input type="text" id="replacing" list="replList" onfocus="loadRepl()" placeholder="Type a name or GPS ID"><datalist id="replList"></datalist></div>' +
+      '<div class="grid"><div><label class="l">Required by</label><input type="date" id="requiredBy" onchange="shortCheck()" oninput="shortCheck()"><div id="shortMsg"></div></div><div></div></div>' +
+      '<label class="l">Client / job requirements</label><textarea id="requirements" placeholder="e.g. PDO approved HSE Supervisor, NEBOSH IGC, 8+ years in oil &amp; gas, H2S, valid driving licence"></textarea>' +
+      '<label class="l">Remarks</label><textarea id="remarks" placeholder="Location, rotation, start date, budget approval…"></textarea>' +
+      '<div id="msg"></div><div class="row"><button class="btn" id="sendBtn" onclick="raise()">Submit request</button></div>';
+  }
+  function raise() {
+    var pos = val('position') === '__other' ? val('posOther').trim() : val('position');
+    var p = { project: val('project'), position: pos, posts: val('posts'), fillWith: radio('fill'), type: radio('type') || 'New post',
+      replacing: val('replacing'), requiredBy: val('requiredBy'), requirements: val('requirements'), remarks: val('remarks') };
+    var m = document.getElementById('msg');
+    if (!p.project || !p.position || !(Number(p.posts) > 0)) { m.innerHTML = '<div class="warn">Please give the project, the position and the number of posts.</div>'; return; }
+    document.getElementById('sendBtn').disabled = true;
+    m.innerHTML = '<div class="muted">Sending&hellip;</div>';
+    google.script.run.withSuccessHandler(function (r) {
+      m.innerHTML = '<div class="ok">Request <b>' + esc(r.id) + '</b> submitted — ' + esc(r.statusText) + '.' + (r.to && r.to.length ? ' Sent to ' + esc(r.to.join(', ')) + '.' : '') + '</div>' +
+        (r.lead ? '<div class="lead">Earliest realistic joining: about <b>' + esc(r.lead) + '</b>' + (r.shortDays > -1 ? ' — later than your required-by date.' : '.') + '</div>' : '');
+      FOCUS = r.id; TAB = 'requests'; setTimeout(load, 6000);
+    }).withFailureHandler(function (e) {
+      document.getElementById('sendBtn').disabled = false;
+      m.innerHTML = '<div class="warn">' + esc(e.message) + '</div>';
+    }).submitPortalRequest(p);
+  }
+
+  RS.ready(function () { load(); });
+</script>
+<p class="site-foot"><a href="./">All GPS HSE pages</a> · <a href="#" onclick="RS.out();return false">Sign out</a> · <a href="privacy.html">Privacy</a></p>
+</body>
+</html>
