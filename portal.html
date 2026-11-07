@@ -3,6 +3,7 @@
 <head>
 <script src="config.js"></script>
 <script src="rs.js"></script>
+<script src="fast.js"></script>
 <meta charset="utf-8">
 <style>
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #F4F6FA; color: #1E2430; font-size: 14px; }
@@ -123,8 +124,9 @@
   function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
   function radio(name) { var e = document.querySelector('input[name="' + name + '"]:checked'); return e ? e.value : ''; }
 
-  function load() {
-    google.script.run.withSuccessHandler(function (d) {
+  // Phase 5F-2: the copy on this computer / Firebase first, then the script's check (fresh: after your own change)
+  function load(fresh) {
+    var take = function (d) {
       D = d;
       document.getElementById('who').textContent = d.user + (d.ho ? ' · GPS HO' : d.mgmt ? ' · Management view' : '');
       if (!TAB) {
@@ -132,7 +134,10 @@
         TAB = d.requests.some(function (r) { return r.canDecide; }) ? 'approve' : focusReq ? 'requests' : 'vacancies';
       }
       render();
-    }).withFailureHandler(function (e) { document.getElementById('body').innerHTML = '<div class="warn">' + esc(e.message) + '</div>'; }).getPortalData(BOOT.as || '');
+    };
+    var bad = function (e) { document.getElementById('body').innerHTML = '<div class="warn">' + esc(e.message) + '</div>'; };
+    if (window.RS && RS.fast) RS.fast('portal_' + RS.fid(BOOT.as || ''), 'fastPortal5', [BOOT.as || ''], take, bad, !!fresh);
+    else google.script.run.withSuccessHandler(take).withFailureHandler(bad).getPortalData(BOOT.as || '');
   }
 
   function render() {
@@ -209,7 +214,7 @@
     btn.parentNode.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
     m.innerHTML = '<span class="muted">Saving&hellip;</span>';
     google.script.run.withSuccessHandler(function () {
-      FOCUS = id; TAB = 'requests'; load();
+      FOCUS = id; TAB = 'requests'; load(true);
     }).withFailureHandler(function (e) {
       btn.parentNode.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
       m.innerHTML = '<span class="req">' + esc(e.message) + '</span>';
@@ -312,7 +317,7 @@
     google.script.run.withSuccessHandler(function (r) {
       m.innerHTML = '<div class="ok">Request <b>' + esc(r.id) + '</b> submitted — ' + esc(r.statusText) + '.' + (r.to && r.to.length ? ' Sent to ' + esc(r.to.join(', ')) + '.' : '') + '</div>' +
         (r.lead ? '<div class="lead">Earliest realistic joining: about <b>' + esc(r.lead) + '</b>' + (r.shortDays > -1 ? ' — later than your required-by date.' : '.') + '</div>' : '');
-      FOCUS = r.id; TAB = 'requests'; setTimeout(load, 6000);
+      FOCUS = r.id; TAB = 'requests'; setTimeout(function () { load(true); }, 6000);
     }).withFailureHandler(function (e) {
       document.getElementById('sendBtn').disabled = false;
       m.innerHTML = '<div class="warn">' + esc(e.message) + '</div>';
